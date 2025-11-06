@@ -10,7 +10,7 @@ from mcp_server_qdrant.common.filters import make_indexes
 from mcp_server_qdrant.common.func_tools import make_partial_function
 from mcp_server_qdrant.common.wrap_filters import wrap_filters
 from mcp_server_qdrant.embeddings.factory import create_embedding_provider
-from mcp_server_qdrant.qdrant import ArbitraryFilter, Entry, Metadata, QdrantConnector
+from mcp_server_qdrant.qdrant import ArbitraryFilter, Entry, QdrantConnector
 from mcp_server_qdrant.settings import (
     EmbeddingProviderSettings,
     QdrantSettings,
@@ -18,6 +18,40 @@ from mcp_server_qdrant.settings import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+# Add normalization function at the top-level (after imports)
+def normalize_metadata(metadata):
+    import ast
+    import datetime
+
+    def add_timestamp(md):
+        md = dict(md) if md is not None else {}
+        md["timestamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        return md
+
+    if metadata is None:
+        return add_timestamp({})
+    if isinstance(metadata, dict):
+        return add_timestamp(metadata)
+    if isinstance(metadata, str):
+        try:
+            parsed = json.loads(metadata)
+            if isinstance(parsed, dict):
+                return add_timestamp(parsed)
+            else:
+                return add_timestamp({"value": parsed})
+        except Exception:
+            # Try ast.literal_eval for single-quoted dict/list
+            try:
+                parsed = ast.literal_eval(metadata)
+                if isinstance(parsed, dict) or isinstance(parsed, list):
+                    return add_timestamp(parsed)
+                else:
+                    return add_timestamp({"value": parsed})
+            except Exception:
+                return add_timestamp({"value": metadata})
+    return add_timestamp({"value": metadata})
 
 
 # FastMCP is an alternative interface for declaring the capabilities
@@ -36,6 +70,7 @@ class QdrantMCPServer(FastMCP):
         instructions: str | None = None,
         **settings: Any,
     ):
+        print(">>> [DEBUG] Running local mcp-server-qdrant code!")
         self.tool_settings = tool_settings
         self.qdrant_settings = qdrant_settings
         self.embedding_provider_settings = embedding_provider_settings
@@ -72,13 +107,10 @@ class QdrantMCPServer(FastMCP):
             collection_name: Annotated[
                 str, Field(description="The collection to store the information in")
             ],
-            # The `metadata` parameter is defined as non-optional, but it can be None.
-            # If we set it to be optional, some of the MCP clients, like Cursor, cannot
-            # handle the optional parameter correctly.
             metadata: Annotated[
-                Metadata | None,
+                dict | str | None,
                 Field(
-                    description="Extra metadata stored along with memorised information. Any json is accepted."
+                    description="Optional metadata to store (object or stringified JSON)"
                 ),
             ] = None,
         ) -> str:
@@ -86,14 +118,16 @@ class QdrantMCPServer(FastMCP):
             Store some information in Qdrant.
             :param ctx: The context for the request.
             :param information: The information to store.
-            :param metadata: JSON metadata to store with the information, optional.
             :param collection_name: The name of the collection to store the information in, optional. If not provided,
                                     the default collection is used.
+            :param metadata: Optional metadata to store with the information.
             :return: A message indicating that the information was stored.
             """
-            await ctx.debug(f"Storing information {information} in Qdrant")
+            await ctx.debug(
+                f"Storing information {information} in Qdrant with metadata {metadata}"
+            )
 
-            entry = Entry(content=information, metadata=metadata)
+            entry = Entry(content=information, metadata=normalize_metadata(metadata))
 
             await self.qdrant_connector.store(entry, collection_name=collection_name)
             if collection_name:

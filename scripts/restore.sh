@@ -32,17 +32,17 @@ fi
 if [ -d "$BACKUP_DIR/spot-mcp-server/qdrant-data" ]; then
   echo ""
   echo "📦 Restoring Spot MCP Server..."
-  
+
   # Stop container
   echo "⏸️  Stopping container..."
   ssh ${ORACLE_USER}@${ORACLE_IP} "docker stop spot-mcp-server 2>/dev/null || true"
-  
+
   # Rsync to Oracle
   echo "📤 Uploading data..."
   rsync -avz --delete \
     "${BACKUP_DIR}/spot-mcp-server/qdrant-data/" \
     ${ORACLE_USER}@${ORACLE_IP}:~/qdrant-data/
-  
+
   # Start container
   echo "▶️  Starting container..."
   ssh ${ORACLE_USER}@${ORACLE_IP} << 'ENDSSH'

@@ -4,9 +4,6 @@ import time
 from typing import Annotated, Any
 
 from fastmcp import Context, FastMCP
-from pydantic import Field
-from qdrant_client import models
-
 from mcp_server_qdrant.analysis import (
     CodeAnalyzer,
     CodebaseScanner,
@@ -26,6 +23,8 @@ from mcp_server_qdrant.settings import (
     RerankerSettings,
     ToolSettings,
 )
+from pydantic import Field
+from qdrant_client import models
 
 logger = logging.getLogger(__name__)
 

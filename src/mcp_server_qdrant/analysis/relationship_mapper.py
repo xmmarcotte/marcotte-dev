@@ -1,9 +1,8 @@
 """Maps relationships between code components."""
 
-import re
 import logging
-from typing import Dict, List, Set, Tuple
 from collections import defaultdict
+from typing import Dict, List, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +15,14 @@ class RelationshipMapper:
         self.usage_graph: Dict[str, Set[str]] = defaultdict(set)
         self.file_to_components: Dict[str, Set[str]] = defaultdict(set)
 
-    def add_file(self, file_path: str, imports: List[str], exports: List[str], classes: List[str], functions: List[str]):
+    def add_file(
+        self,
+        file_path: str,
+        imports: List[str],
+        exports: List[str],
+        classes: List[str],
+        functions: List[str],
+    ):
         """Add a file and its components to the relationship graph."""
         # Map file to its components
         for cls in classes:
@@ -45,7 +51,11 @@ class RelationshipMapper:
             if other_file != file_path:
                 # Check if other_file imports from file_path
                 imports = self.import_graph.get(other_file, set())
-                if any(comp in imports or file_path in str(imp) for imp in imports for comp in file_components):
+                if any(
+                    comp in imports or file_path in str(imp)
+                    for imp in imports
+                    for comp in file_components
+                ):
                     dependents.append(other_file)
 
         return dependents

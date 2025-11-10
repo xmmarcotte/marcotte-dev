@@ -7,25 +7,25 @@ from fastmcp import Context, FastMCP
 from pydantic import Field
 from qdrant_client import models
 
-from mcp_server_qdrant.common.filters import make_indexes
-from mcp_server_qdrant.common.func_tools import make_partial_function
-from mcp_server_qdrant.common.wrap_filters import wrap_filters
-from mcp_server_qdrant.embeddings.factory import create_embedding_provider
-from mcp_server_qdrant.qdrant import ArbitraryFilter, Entry, QdrantConnector
-import hashlib
 from mcp_server_qdrant.analysis import (
     CodeAnalyzer,
     CodeChunker,
+    CodebaseScanner,
     FileHashTracker,
+    FileInfo,
     RelationshipMapper,
 )
+from mcp_server_qdrant.common.filters import make_indexes
+from mcp_server_qdrant.common.func_tools import make_partial_function
+from mcp_server_qdrant.embeddings.factory import create_embedding_provider
+from mcp_server_qdrant.qdrant import ArbitraryFilter, Entry, QdrantConnector
+from mcp_server_qdrant.reranker import LocalReranker
 from mcp_server_qdrant.settings import (
     EmbeddingProviderSettings,
     QdrantSettings,
     RerankerSettings,
     ToolSettings,
 )
-from mcp_server_qdrant.reranker import LocalReranker
 
 logger = logging.getLogger(__name__)
 
@@ -157,6 +157,7 @@ class QdrantMCPServer(FastMCP):
             FileInfo object with basic information
         """
         from pathlib import Path
+
         from mcp_server_qdrant.analysis.codebase_scanner import FileInfo
 
         # Simple language detection from extension
@@ -313,7 +314,7 @@ class QdrantMCPServer(FastMCP):
                     import json
 
                     store_metadata.update(json.loads(metadata))
-                except:
+                except (json.JSONDecodeError, TypeError, ValueError):
                     pass
 
             # Set category-specific metadata
@@ -586,7 +587,6 @@ class QdrantMCPServer(FastMCP):
                     meta = entry.metadata or {}
                     file_path = meta.get("file_path", "unknown")
                     name = meta.get("name", "")
-                    chunk_type = meta.get("chunk_type", "")
                     start_line = meta.get("start_line", "")
                     ref = file_path
                     if start_line:
@@ -607,10 +607,6 @@ class QdrantMCPServer(FastMCP):
 
         search_foo = search
         store_foo = store
-
-        filterable_conditions = (
-            self.qdrant_settings.filterable_fields_dict_with_conditions()
-        )
 
         # Note: search and store don't use wrap_filters since they have their own filter logic
         if self.qdrant_settings.collection_name:
@@ -693,10 +689,7 @@ class QdrantMCPServer(FastMCP):
             # Analyze files in-memory
             logger.info(f"📂 Indexing {len(files)} files from IDE (remote server mode)")
 
-            from mcp_server_qdrant.analysis.codebase_scanner import (
-                FileInfo,
-                ProjectStructure,
-            )
+            from mcp_server_qdrant.analysis.codebase_scanner import ProjectStructure
 
             structure_files = []
             languages = {}
@@ -1542,7 +1535,6 @@ class QdrantMCPServer(FastMCP):
             Much faster than full codebase scan.
             """
             import time
-            from pathlib import Path
 
             start_time = time.time()
 

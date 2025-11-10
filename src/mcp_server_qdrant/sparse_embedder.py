@@ -10,7 +10,7 @@ import logging
 import math
 import re
 from collections import Counter
-from typing import Dict, List, Set
+from typing import Dict, List
 
 from qdrant_client.models import SparseVector
 
@@ -18,9 +18,30 @@ logger = logging.getLogger(__name__)
 
 # Common English stop words (minimal set)
 STOP_WORDS = {
-    "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
-    "has", "he", "in", "is", "it", "its", "of", "on", "that", "the",
-    "to", "was", "will", "with"
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "by",
+    "for",
+    "from",
+    "has",
+    "he",
+    "in",
+    "is",
+    "it",
+    "its",
+    "of",
+    "on",
+    "that",
+    "the",
+    "to",
+    "was",
+    "will",
+    "with",
 }
 
 
@@ -61,13 +82,10 @@ class BM25SparseEmbedder:
             List of lowercase terms (stopwords removed)
         """
         # Split on non-alphanumeric, keep underscores for identifiers
-        tokens = re.findall(r'\w+', text.lower())
+        tokens = re.findall(r"\w+", text.lower())
 
         # Remove stop words but keep short technical terms (< 3 chars are often meaningful in code)
-        filtered = [
-            t for t in tokens
-            if t not in STOP_WORDS or len(t) < 3
-        ]
+        filtered = [t for t in tokens if t not in STOP_WORDS or len(t) < 3]
 
         return filtered
 
@@ -179,7 +197,9 @@ class BM25SparseEmbedder:
                 doc_freq = self.df.get(term, 1)
 
                 # Simplified query scoring (IDF * TF)
-                idf = math.log((self.doc_count - doc_freq + 0.5) / (doc_freq + 0.5) + 1.0)
+                idf = math.log(
+                    (self.doc_count - doc_freq + 0.5) / (doc_freq + 0.5) + 1.0
+                )
                 score = idf * freq
 
                 if score > 0:

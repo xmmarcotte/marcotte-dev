@@ -72,7 +72,9 @@ class CodeChunker:
                 if '"""' in line or "'''" in line:
                     # Find end of docstring
                     end = i + 1
-                    while end < len(lines) and ('"""' not in lines[end] and "'''" not in lines[end]):
+                    while end < len(lines) and (
+                        '"""' not in lines[end] and "'''" not in lines[end]
+                    ):
                         end += 1
                     docstring_content = "\n".join(lines[i : end + 1])
                     chunks.append(
@@ -144,7 +146,11 @@ class CodeChunker:
                 # Class definition (header + docstring)
                 start_line = node.lineno
                 # Only include class definition line and docstring, not all methods
-                docstring_node = node.body[0] if node.body and isinstance(node.body[0], ast.Expr) else None
+                docstring_node = (
+                    node.body[0]
+                    if node.body and isinstance(node.body[0], ast.Expr)
+                    else None
+                )
                 if docstring_node:
                     end_line = docstring_node.end_lineno or start_line
                 else:
@@ -168,7 +174,9 @@ class CodeChunker:
 
         return chunks
 
-    def chunk_file(self, content: str, file_path: str, language: str) -> List[CodeChunk]:
+    def chunk_file(
+        self, content: str, file_path: str, language: str
+    ) -> List[CodeChunk]:
         """
         Chunk a file based on its language.
 

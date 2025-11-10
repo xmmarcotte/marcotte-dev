@@ -25,7 +25,9 @@ class LocalReranker:
     This provides 20-30% improvement in top-10 precision with minimal overhead.
     """
 
-    def __init__(self, model_name: str = "BAAI/bge-reranker-base", enabled: bool = True):
+    def __init__(
+        self, model_name: str = "BAAI/bge-reranker-base", enabled: bool = True
+    ):
         """
         Initialize reranker.
 
@@ -40,13 +42,14 @@ class LocalReranker:
         if enabled:
             try:
                 # Try to import and initialize reranker model
-                from fastembed import TextEmbedding
 
                 # Note: FastEmbed's reranker support may vary by version
                 # As of late 2024, reranker models are experimental
                 # For production, we fall back to distance-based reranking
                 logger.info(f"🎯 Reranker initialized (fallback mode): {model_name}")
-                self.enabled = False  # Use fallback until FastEmbed has stable reranker API
+                self.enabled = (
+                    False  # Use fallback until FastEmbed has stable reranker API
+                )
             except Exception as e:
                 logger.warning(f"⚠️  Could not initialize reranker: {e}")
                 logger.info("   Falling back to distance-based reranking")

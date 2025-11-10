@@ -7,7 +7,6 @@ to make search more forgiving and effective.
 
 import logging
 import re
-from typing import List, Set
 
 logger = logging.getLogger(__name__)
 
@@ -68,12 +67,12 @@ class QueryEnhancer:
         """
         # Check for camelCase, PascalCase, snake_case patterns
         code_patterns = [
-            r'[a-z]+[A-Z]',  # camelCase
-            r'[A-Z][a-z]+[A-Z]',  # PascalCase
-            r'\w+_\w+',  # snake_case
-            r'def\s+\w+',  # function definition
-            r'class\s+\w+',  # class definition
-            r'\w+\(\)',  # function call
+            r"[a-z]+[A-Z]",  # camelCase
+            r"[A-Z][a-z]+[A-Z]",  # PascalCase
+            r"\w+_\w+",  # snake_case
+            r"def\s+\w+",  # function definition
+            r"class\s+\w+",  # class definition
+            r"\w+\(\)",  # function call
         ]
 
         for pattern in code_patterns:
@@ -98,7 +97,7 @@ class QueryEnhancer:
 
         for word in words:
             # Remove punctuation for matching
-            clean_word = re.sub(r'[^\w]', '', word)
+            clean_word = re.sub(r"[^\w]", "", word)
 
             if clean_word in QueryEnhancer.ABBREVIATIONS:
                 # Add both original and expanded
@@ -125,7 +124,7 @@ class QueryEnhancer:
         enhanced = list(words)
 
         for word in words:
-            clean_word = re.sub(r'[^\w]', '', word)
+            clean_word = re.sub(r"[^\w]", "", word)
 
             if clean_word in QueryEnhancer.SYNONYMS:
                 synonyms = QueryEnhancer.SYNONYMS[clean_word][:max_synonyms]
@@ -150,13 +149,13 @@ class QueryEnhancer:
 
         for word in query.split():
             # Handle camelCase
-            if re.search(r'[a-z][A-Z]', word):
+            if re.search(r"[a-z][A-Z]", word):
                 # Insert spaces before capitals
-                normalized = re.sub(r'([a-z])([A-Z])', r'\1 \2', word)
+                normalized = re.sub(r"([a-z])([A-Z])", r"\1 \2", word)
                 words.append(normalized.lower())
             # Handle snake_case
-            elif '_' in word:
-                words.append(word.replace('_', ' '))
+            elif "_" in word:
+                words.append(word.replace("_", " "))
             else:
                 words.append(word)
 

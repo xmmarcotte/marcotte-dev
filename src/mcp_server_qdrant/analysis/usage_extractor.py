@@ -4,7 +4,6 @@ Captures how functions and classes are actually used.
 """
 
 import ast
-import re
 import logging
 from dataclasses import dataclass
 from typing import List, Optional
@@ -26,9 +25,7 @@ class UsageExample:
 class UsageExtractor:
     """Extracts usage examples from code."""
 
-    def extract_python_usage(
-        self, content: str, file_path: str
-    ) -> List[UsageExample]:
+    def extract_python_usage(self, content: str, file_path: str) -> List[UsageExample]:
         """
         Extract usage examples from Python code.
 
@@ -58,7 +55,9 @@ class UsageExtractor:
                     name = alias.asname if alias.asname else alias.name
                     imported_names.add(name)
 
-        logger.info(f"   🔎 Detected {len(imported_names)} imported names in {file_path}")
+        logger.info(
+            f"   🔎 Detected {len(imported_names)} imported names in {file_path}"
+        )
         logger.info(f"       Names: {sorted(list(imported_names))}")
 
         # Track what's being defined locally (skip these)

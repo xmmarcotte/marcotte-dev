@@ -15,26 +15,54 @@ class FileHashTracker:
         self.file_hashes: Dict[str, str] = {}  # {file_path: hash}
         self.last_check: Dict[str, float] = {}  # {file_path: timestamp}
         self.indexable_extensions: Set[str] = {
-            '.py', '.js', '.ts', '.jsx', '.tsx', '.go', '.rs', '.java',
-            '.c', '.cpp', '.h', '.hpp', '.cs', '.rb', '.php', '.swift',
-            '.kt', '.scala', '.clj', '.sh', '.bash', '.zsh', '.lua',
-            '.r', '.m', '.mm', '.sql', '.yaml', '.yml', '.json', '.toml'
+            ".py",
+            ".js",
+            ".ts",
+            ".jsx",
+            ".tsx",
+            ".go",
+            ".rs",
+            ".java",
+            ".c",
+            ".cpp",
+            ".h",
+            ".hpp",
+            ".cs",
+            ".rb",
+            ".php",
+            ".swift",
+            ".kt",
+            ".scala",
+            ".clj",
+            ".sh",
+            ".bash",
+            ".zsh",
+            ".lua",
+            ".r",
+            ".m",
+            ".mm",
+            ".sql",
+            ".yaml",
+            ".yml",
+            ".json",
+            ".toml",
         }
 
     def compute_hash(self, content: str) -> str:
         """Compute MD5 hash of file content."""
         try:
-            return hashlib.md5(content.encode('utf-8')).hexdigest()
+            return hashlib.md5(content.encode("utf-8")).hexdigest()
         except (UnicodeEncodeError, AttributeError):
             # Fallback for binary or non-UTF8 content
             if isinstance(content, bytes):
                 return hashlib.md5(content).hexdigest()
             # For strings that can't be UTF-8 encoded, use latin-1
-            return hashlib.md5(content.encode('latin-1', errors='ignore')).hexdigest()
+            return hashlib.md5(content.encode("latin-1", errors="ignore")).hexdigest()
 
     def is_indexable(self, file_path: str) -> bool:
         """Check if file type should be indexed."""
         import os
+
         _, ext = os.path.splitext(file_path)
         return ext.lower() in self.indexable_extensions
 
@@ -55,13 +83,17 @@ class FileHashTracker:
 
         if old_hash != new_hash:
             status = "NEW" if old_hash is None else "CHANGED"
-            logger.info(f"   🔍 Hash check: {file_path} → {status} (old: {old_hash[:8] if old_hash else 'none'}... → new: {new_hash[:8]}...)")
+            logger.info(
+                f"   🔍 Hash check: {file_path} → {status} (old: {old_hash[:8] if old_hash else 'none'}... → new: {new_hash[:8]}...)"
+            )
             self.file_hashes[file_path] = new_hash
             self.last_check[file_path] = time.time()
             return True
 
         # Update last check time even if not changed
-        logger.info(f"   🔍 Hash check: {file_path} → UNCHANGED (hash: {new_hash[:8]}...)")
+        logger.info(
+            f"   🔍 Hash check: {file_path} → UNCHANGED (hash: {new_hash[:8]}...)"
+        )
         self.last_check[file_path] = time.time()
         return False
 
@@ -80,7 +112,9 @@ class FileHashTracker:
         for path, content in files.items():
             if self.has_changed(path, content):
                 changed.append(path)
-        logger.info(f"   ✓ Hash check complete: {len(changed)} changed, {len(files) - len(changed)} unchanged")
+        logger.info(
+            f"   ✓ Hash check complete: {len(changed)} changed, {len(files) - len(changed)} unchanged"
+        )
         return changed
 
     def mark_indexed(self, file_path: str, content: str):
@@ -89,7 +123,9 @@ class FileHashTracker:
             hash_value = self.compute_hash(content)
             self.file_hashes[file_path] = hash_value
             self.last_check[file_path] = time.time()
-            logger.info(f"   📌 Marked as indexed: {file_path} (hash: {hash_value[:8]}...)")
+            logger.info(
+                f"   📌 Marked as indexed: {file_path} (hash: {hash_value[:8]}...)"
+            )
 
     def get_stats(self) -> Dict[str, Any]:
         """Get statistics about tracked files."""

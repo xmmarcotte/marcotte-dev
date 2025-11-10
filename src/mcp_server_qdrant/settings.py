@@ -167,11 +167,7 @@ class QdrantSettings(BaseSettings):
         fields = self.default_filterable_fields.copy()
         if self.filterable_fields:
             fields.extend(self.filterable_fields)
-        return {
-            field.name: field
-            for field in fields
-            if field.condition is not None
-        }
+        return {field.name: field for field in fields if field.condition is not None}
 
     @model_validator(mode="after")
     def check_local_path_conflict(self) -> "QdrantSettings":

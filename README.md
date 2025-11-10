@@ -231,6 +231,48 @@ docker run -p 3855:3855 \
 > [!TIP]
 > The container is configured to listen on all network interfaces (`FASTMCP_HOST="0.0.0.0"`) by default, which is necessary for Docker deployments.
 
+### Deploying to Oracle Cloud Always Free
+
+For a **$0/month** centralized deployment accessible from all your machines, deploy to Oracle Cloud's Always Free tier:
+
+```bash
+# 1. Build ARM64 image and deploy
+./deploy-oracle.sh <your-oracle-public-ip>
+
+# 2. Install Tailscale on Oracle instance and your machines (recommended)
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up  # Note the 100.x.x.x IP
+
+# 3. Set up automated backups on Linux laptop
+./setup-cron-backup.sh 100.x.x.x ~/spot-backup daily
+
+# 4. Update mcp.json on all machines (use Tailscale IP)
+{
+  "spot": {
+    "url": "http://100.x.x.x:3856/mcp"
+  }
+}
+```
+
+**Features:**
+- 24GB RAM, 4 ARM cores, 200GB storage (free forever)
+- Shared memory across all your machines
+- Private access via Tailscale (no public exposure)
+- Automated backup scripts included
+- Full deployment guide: [ORACLE_CLOUD_DEPLOY.md](ORACLE_CLOUD_DEPLOY.md)
+
+**Backup & Recovery:**
+```bash
+# Set up automated daily backup to Linux laptop (use Tailscale IP)
+./setup-cron-backup.sh 100.x.x.x ~/spot-backup daily
+
+# Manual backup anytime
+./backup-local.sh 100.x.x.x ~/spot-backup
+
+# Restore if needed
+./restore-from-backup.sh ~/spot-backup 100.x.x.x
+```
+
 ### Installing via Smithery
 
 To install Qdrant MCP Server for Claude Desktop automatically via [Smithery](https://smithery.ai/protocol/mcp-server-qdrant):

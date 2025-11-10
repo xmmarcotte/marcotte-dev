@@ -1,9 +1,8 @@
 """Analyzes code to extract semantic information and patterns."""
 
-import re
 import logging
-from typing import Dict, List, Optional, Any
-from pathlib import Path
+import re
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -41,19 +40,23 @@ class CodeAnalyzer:
         if language == "python":
             # FastAPI/Flask patterns
             patterns = [
-                (r'@app\.(get|post|put|delete|patch)\(["\']([^"\']+)["\']', r'\1'),
-                (r'@router\.(get|post|put|delete|patch)\(["\']([^"\']+)["\']', r'\1'),
+                (r'@app\.(get|post|put|delete|patch)\(["\']([^"\']+)["\']', r"\1"),
+                (r'@router\.(get|post|put|delete|patch)\(["\']([^"\']+)["\']', r"\1"),
                 (r'@.*?\.route\(["\']([^"\']+)["\']', "route"),
             ]
 
             for pattern, method in patterns:
                 matches = re.finditer(pattern, content)
                 for match in matches:
-                    endpoints.append({
-                        "path": match.group(2) if len(match.groups()) > 1 else match.group(1),
-                        "method": method.upper() if method != "route" else "GET",
-                        "line": content[:match.start()].count("\n") + 1,
-                    })
+                    endpoints.append(
+                        {
+                            "path": match.group(2)
+                            if len(match.groups()) > 1
+                            else match.group(1),
+                            "method": method.upper() if method != "route" else "GET",
+                            "line": content[: match.start()].count("\n") + 1,
+                        }
+                    )
 
         return endpoints
 
@@ -64,22 +67,26 @@ class CodeAnalyzer:
 
         if language == "python":
             # Pydantic models
-            model_pattern = r'class\s+(\w+)\s*\(.*?BaseModel.*?\):'
+            model_pattern = r"class\s+(\w+)\s*\(.*?BaseModel.*?\):"
             for match in re.finditer(model_pattern, content, re.DOTALL):
-                structures.append({
-                    "name": match.group(1),
-                    "type": "pydantic_model",
-                    "line": content[:match.start()].count("\n") + 1,
-                })
+                structures.append(
+                    {
+                        "name": match.group(1),
+                        "type": "pydantic_model",
+                        "line": content[: match.start()].count("\n") + 1,
+                    }
+                )
 
             # Dataclasses
-            dataclass_pattern = r'@dataclass\s+class\s+(\w+)'
+            dataclass_pattern = r"@dataclass\s+class\s+(\w+)"
             for match in re.finditer(dataclass_pattern, content):
-                structures.append({
-                    "name": match.group(1),
-                    "type": "dataclass",
-                    "line": content[:match.start()].count("\n") + 1,
-                })
+                structures.append(
+                    {
+                        "name": match.group(1),
+                        "type": "dataclass",
+                        "line": content[: match.start()].count("\n") + 1,
+                    }
+                )
 
         return structures
 
@@ -90,12 +97,14 @@ class CodeAnalyzer:
 
         if language == "python":
             # Import statements
-            import_pattern = r'(?:from\s+(\S+)\s+)?import\s+([^\n]+)'
+            import_pattern = r"(?:from\s+(\S+)\s+)?import\s+([^\n]+)"
             for match in re.finditer(import_pattern, content):
                 if match.group(1):  # from X import Y
                     dependencies.append(match.group(1))
                 else:  # import X
-                    deps = [d.strip().split(" as ")[0] for d in match.group(2).split(",")]
+                    deps = [
+                        d.strip().split(" as ")[0] for d in match.group(2).split(",")
+                    ]
                     dependencies.extend(deps)
 
         return list(set(dependencies))
@@ -107,7 +116,7 @@ class CodeAnalyzer:
 
         if language == "python":
             # Python decorators: @decorator_name
-            decorator_pattern = r'@(\w+(?:\.\w+)*)'
+            decorator_pattern = r"@(\w+(?:\.\w+)*)"
             decorators = list(set(re.findall(decorator_pattern, content)))
 
         return decorators
@@ -138,11 +147,20 @@ class CodeAnalyzer:
             tags.append("async")
 
         # Purpose detection
-        if any(word in content_lower for word in ["@app.get", "@app.post", "router.", "endpoint"]):
+        if any(
+            word in content_lower
+            for word in ["@app.get", "@app.post", "router.", "endpoint"]
+        ):
             tags.append("api")
-        if any(word in content_lower for word in ["database", "db", "session", "query", "select"]):
+        if any(
+            word in content_lower
+            for word in ["database", "db", "session", "query", "select"]
+        ):
             tags.append("database")
-        if any(word in content_lower for word in ["auth", "login", "token", "jwt", "password"]):
+        if any(
+            word in content_lower
+            for word in ["auth", "login", "token", "jwt", "password"]
+        ):
             tags.append("authentication")
         if any(word in content_lower for word in ["model", "schema", "basemodel"]):
             tags.append("models")
@@ -182,7 +200,9 @@ class CodeAnalyzer:
             # Check for type hints
             if "->" in content or ": " in content:
                 # Simple heuristic: presence of type annotations
-                type_hint_pattern = r'def \w+\([^)]*:\s*\w+[^)]*\)|def \w+\([^)]*\)\s*->'
+                type_hint_pattern = (
+                    r"def \w+\([^)]*:\s*\w+[^)]*\)|def \w+\([^)]*\)\s*->"
+                )
                 if re.search(type_hint_pattern, content):
                     signals["has_type_hints"] = True
 
@@ -193,7 +213,9 @@ class CodeAnalyzer:
         return signals
 
     @staticmethod
-    def extract_function_signatures(content: str, language: str) -> List[Dict[str, Any]]:
+    def extract_function_signatures(
+        content: str, language: str
+    ) -> List[Dict[str, Any]]:
         """
         Extract function signatures with type information.
 
@@ -204,19 +226,21 @@ class CodeAnalyzer:
 
         if language == "python":
             # Match function definitions with optional type hints
-            func_pattern = r'(?:(@\w+(?:\.\w+)*)\s+)*def\s+(\w+)\s*\(([^)]*)\)(?:\s*->\s*([^:]+))?:'
+            func_pattern = r"(?:(@\w+(?:\.\w+)*)\s+)*def\s+(\w+)\s*\(([^)]*)\)(?:\s*->\s*([^:]+))?:"
             for match in re.finditer(func_pattern, content):
                 decorator = match.group(1) if match.group(1) else None
                 name = match.group(2)
                 params = match.group(3).strip() if match.group(3) else ""
                 return_type = match.group(4).strip() if match.group(4) else None
 
-                signatures.append({
-                    "name": name,
-                    "params": params,
-                    "return_type": return_type,
-                    "decorator": decorator,
-                })
+                signatures.append(
+                    {
+                        "name": name,
+                        "params": params,
+                        "return_type": return_type,
+                        "decorator": decorator,
+                    }
+                )
 
         return signatures
 
@@ -236,4 +260,6 @@ class CodeAnalyzer:
         if file_info.get("purpose"):
             parts.append(f"Purpose: {file_info['purpose']}")
 
-        return ". ".join(parts) if parts else f"File: {file_info.get('path', 'unknown')}"
+        return (
+            ". ".join(parts) if parts else f"File: {file_info.get('path', 'unknown')}"
+        )

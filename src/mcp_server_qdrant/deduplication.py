@@ -25,7 +25,10 @@ def generate_content_hash(file_path: str, chunk_id: Optional[str] = None) -> str
 
 
 async def deduplicate_before_store(
-    qdrant_connector, file_path: str, collection_name: str, chunk_id: Optional[str] = None
+    qdrant_connector,
+    file_path: str,
+    collection_name: str,
+    chunk_id: Optional[str] = None,
 ) -> bool:
     """
     Check if an entry already exists and delete it before storing new version.
@@ -52,7 +55,8 @@ async def deduplicate_before_store(
             query_filter=models.Filter(
                 must=[
                     models.FieldCondition(
-                        key="metadata.file_path", match=models.MatchValue(value=file_path)
+                        key="metadata.file_path",
+                        match=models.MatchValue(value=file_path),
                     )
                 ]
             ),
@@ -61,7 +65,10 @@ async def deduplicate_before_store(
         if existing:
             # Delete existing entries for this file/chunk
             for entry in existing:
-                if entry.metadata and entry.metadata.get("content_hash") == content_hash:
+                if (
+                    entry.metadata
+                    and entry.metadata.get("content_hash") == content_hash
+                ):
                     logger.info(f"Found duplicate for {file_path}:{chunk_id}, skipping")
                     return True
 

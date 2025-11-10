@@ -4,7 +4,7 @@ import ast
 import fnmatch
 import logging
 import os
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FileInfo:
     """Information about a code file."""
+
     path: str
     language: str
     size: int
@@ -29,6 +30,7 @@ class FileInfo:
 @dataclass
 class ProjectStructure:
     """Structure of the entire project."""
+
     root_path: str
     total_files: int
     languages: Dict[str, int]
@@ -40,7 +42,12 @@ class ProjectStructure:
 class CodebaseScanner:
     """Scans codebase and extracts structural information."""
 
-    def __init__(self, root_path: str, ignore_patterns: Optional[List[str]] = None, respect_gitignore: bool = True):
+    def __init__(
+        self,
+        root_path: str,
+        ignore_patterns: Optional[List[str]] = None,
+        respect_gitignore: bool = True,
+    ):
         self.root_path = Path(root_path).resolve()
 
         # Comprehensive default ignores
@@ -49,7 +56,6 @@ class CodebaseScanner:
             ".git",
             ".svn",
             ".hg",
-
             # Python
             "__pycache__",
             ".venv",
@@ -61,34 +67,28 @@ class CodebaseScanner:
             "*.egg-info",
             ".mypy_cache",
             ".ruff_cache",
-
             # Node.js
             "node_modules",
             ".next",
             ".nuxt",
             "out",
             ".cache",
-
             # Build outputs
             "dist",
             "build",
             "target",  # Rust, Java
             "bin",
             "obj",  # C#
-
             # IDE
             ".idea",
             ".vscode",
             ".vs",
-
             # OS
             ".DS_Store",
             "Thumbs.db",
-
             # Project specific
             ".local-dev",
             "qdrant-data",
-
             # Large files
             "*.log",
             "*.lock",
@@ -136,7 +136,9 @@ class CodebaseScanner:
         for pattern in self.ignore_patterns:
             # Wildcard pattern matching
             if "*" in pattern:
-                if fnmatch.fnmatch(path_name, pattern) or fnmatch.fnmatch(path_str, pattern):
+                if fnmatch.fnmatch(path_name, pattern) or fnmatch.fnmatch(
+                    path_str, pattern
+                ):
                     return True
             # Substring matching
             elif pattern in path_str:
@@ -145,7 +147,9 @@ class CodebaseScanner:
         # Check gitignore patterns
         for pattern in self.gitignore_patterns:
             # Simple glob matching
-            if fnmatch.fnmatch(path_str, pattern) or fnmatch.fnmatch(path_str, f"**/{pattern}"):
+            if fnmatch.fnmatch(path_str, pattern) or fnmatch.fnmatch(
+                path_str, f"**/{pattern}"
+            ):
                 return True
             # Directory matching
             if pattern in path_str.split(os.sep):
@@ -210,12 +214,14 @@ class CodebaseScanner:
 
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
-                functions.append({
-                    "name": node.name,
-                    "line": node.lineno,
-                    "args": [arg.arg for arg in node.args.args],
-                    "docstring": ast.get_docstring(node),
-                })
+                functions.append(
+                    {
+                        "name": node.name,
+                        "line": node.lineno,
+                        "args": [arg.arg for arg in node.args.args],
+                        "docstring": ast.get_docstring(node),
+                    }
+                )
             elif isinstance(node, ast.ClassDef):
                 methods = [
                     {
@@ -225,12 +231,14 @@ class CodebaseScanner:
                     for n in node.body
                     if isinstance(n, ast.FunctionDef)
                 ]
-                classes.append({
-                    "name": node.name,
-                    "line": node.lineno,
-                    "methods": methods,
-                    "docstring": ast.get_docstring(node),
-                })
+                classes.append(
+                    {
+                        "name": node.name,
+                        "line": node.lineno,
+                        "methods": methods,
+                        "docstring": ast.get_docstring(node),
+                    }
+                )
             elif isinstance(node, ast.Import):
                 for alias in node.names:
                     imports.append(alias.name)
@@ -238,7 +246,9 @@ class CodebaseScanner:
                 if node.module:
                     imports.append(node.module)
                 for alias in node.names:
-                    imports.append(f"{node.module}.{alias.name}" if node.module else alias.name)
+                    imports.append(
+                        f"{node.module}.{alias.name}" if node.module else alias.name
+                    )
 
         # Find exports (top-level assignments, functions, classes)
         for node in tree.body:
@@ -306,10 +316,18 @@ class CodebaseScanner:
                 file_info = self.analyze_file(file_path)
                 if file_info:
                     files.append(file_info)
-                    languages[file_info.language] = languages.get(file_info.language, 0) + 1
+                    languages[file_info.language] = (
+                        languages.get(file_info.language, 0) + 1
+                    )
 
                     # Detect entry points
-                    if filename in ["main.py", "__main__.py", "index.js", "main.go", "main.rs"]:
+                    if filename in [
+                        "main.py",
+                        "__main__.py",
+                        "index.js",
+                        "main.go",
+                        "main.rs",
+                    ]:
                         entry_points.append(file_info.path)
                     if "main" in filename.lower() or "index" in filename.lower():
                         main_modules.append(file_info.path)

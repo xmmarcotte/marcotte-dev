@@ -6,13 +6,14 @@ from pydantic_settings import BaseSettings
 from mcp_server_qdrant.embeddings.types import EmbeddingProviderType
 
 DEFAULT_TOOL_STORE_DESCRIPTION = (
-    "Keep the memory for later use, when you are asked to remember something."
+    "Use when: storing general notes, observations, or context that doesn't fit other categories (decisions/patterns). "
+    "Supports metadata for filtering. For structured storage with rich context, prefer remember-decision or "
+    "remember-pattern instead. Store automatically - don't ask permission."
 )
 DEFAULT_TOOL_FIND_DESCRIPTION = (
-    "Look up memories in Qdrant. Use this tool when you need to: \n"
-    " - Find memories by their content \n"
-    " - Access memories for further analysis \n"
-    " - Get some personal information about the user"
+    "Use when: quick searches across all memories, finding general information, or unsure which specialized tool to use. "
+    "Returns mixed results from all categories. For focused searches with structured results, use get-smart-context "
+    "or search-patterns instead. Search first, explain later."
 )
 
 METADATA_PATH = "metadata"
@@ -43,8 +44,35 @@ class EmbeddingProviderSettings(BaseSettings):
         validation_alias="EMBEDDING_PROVIDER",
     )
     model_name: str = Field(
-        default="sentence-transformers/all-MiniLM-L6-v2",
+        default="BAAI/bge-large-en-v1.5",
         validation_alias="EMBEDDING_MODEL",
+    )
+
+
+class RerankerSettings(BaseSettings):
+    """
+    Configuration for reranking search results.
+    """
+
+    enabled: bool = Field(
+        default=True,
+        validation_alias="RERANKER_ENABLED",
+        description="Enable reranking for improved precision",
+    )
+    model: str = Field(
+        default="BAAI/bge-reranker-base",
+        validation_alias="RERANKER_MODEL",
+        description="Cross-encoder model for reranking",
+    )
+    top_k: int = Field(
+        default=10,
+        validation_alias="RERANK_TOP_K",
+        description="Number of results to return after reranking",
+    )
+    candidates: int = Field(
+        default=50,
+        validation_alias="RERANK_CANDIDATES",
+        description="Number of candidates to retrieve before reranking",
     )
 
 
@@ -91,17 +119,57 @@ class QdrantSettings(BaseSettings):
         default=False, validation_alias="QDRANT_ALLOW_ARBITRARY_FILTER"
     )
 
+    @property
+    def default_filterable_fields(self) -> list[FilterableField]:
+        """Default filterable fields for unified semantic search."""
+        return [
+            FilterableField(
+                name="category",
+                description="Content category (codebase, decision, pattern, memory)",
+                field_type="keyword",
+                condition="==",
+            ),
+            FilterableField(
+                name="type",
+                description="Specific content type (codebase_file, architectural_decision, coding_pattern)",
+                field_type="keyword",
+                condition="==",
+            ),
+            FilterableField(
+                name="workspace",
+                description="Workspace identifier for isolating code from different projects",
+                field_type="keyword",
+                condition="==",
+            ),
+            FilterableField(
+                name="language",
+                description="Programming language (python, javascript, etc.)",
+                field_type="keyword",
+                condition="==",
+            ),
+            FilterableField(
+                name="timestamp",
+                description="Unix timestamp (numeric) when entry was created",
+                field_type="float",
+                condition=">=",
+            ),
+        ]
+
     def filterable_fields_dict(self) -> dict[str, FilterableField]:
-        if self.filterable_fields is None:
-            return {}
-        return {field.name: field for field in self.filterable_fields}
+        # Merge default fields with custom fields
+        fields = self.default_filterable_fields.copy()
+        if self.filterable_fields:
+            fields.extend(self.filterable_fields)
+        return {field.name: field for field in fields}
 
     def filterable_fields_dict_with_conditions(self) -> dict[str, FilterableField]:
-        if self.filterable_fields is None:
-            return {}
+        # Merge default fields with custom fields, filter those with conditions
+        fields = self.default_filterable_fields.copy()
+        if self.filterable_fields:
+            fields.extend(self.filterable_fields)
         return {
             field.name: field
-            for field in self.filterable_fields
+            for field in fields
             if field.condition is not None
         }
 

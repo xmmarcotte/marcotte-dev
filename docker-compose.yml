@@ -1,0 +1,27 @@
+# Spot Memory Server - High-Quality Semantic Search
+# Features:
+# - BAAI/bge-large-en-v1.5 embeddings (1024 dims)
+# - Local reranking for precision
+# - Enhanced metadata extraction
+# - Hybrid search infrastructure
+# Just run: docker-compose up -d
+version: '3.8'
+
+services:
+  mcp-server-qdrant:
+    build: .
+    container_name: mcp-server-qdrant
+    ports:
+      - "3856:3855"  # Map host port 3856 to container port 3855 (3855 is used by existing vectorMemory)
+    volumes:
+      - qdrant-data:/app/qdrant-data
+    environment:
+      - QDRANT_LOCAL_PATH=/app/qdrant-data
+      - COLLECTION_NAME=default-collection
+      - EMBEDDING_MODEL=BAAI/bge-large-en-v1.5
+      - FASTMCP_HOST=0.0.0.0
+      - FASTMCP_PORT=3855  # Container listens on 3855, but host maps to 3856
+    restart: unless-stopped
+
+volumes:
+  qdrant-data:

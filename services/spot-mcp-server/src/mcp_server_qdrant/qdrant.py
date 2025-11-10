@@ -2,11 +2,10 @@ import logging
 import uuid
 from typing import Any
 
-from pydantic import BaseModel
-from qdrant_client import AsyncQdrantClient, models
-
 from mcp_server_qdrant.embeddings.base import EmbeddingProvider
 from mcp_server_qdrant.settings import METADATA_PATH
+from pydantic import BaseModel
+from qdrant_client import AsyncQdrantClient, models
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +41,7 @@ class QdrantConnector:
         embedding_provider: EmbeddingProvider,
         qdrant_local_path: str | None = None,
         field_indexes: dict[str, models.PayloadSchemaType] | None = None,
+        reranker: Any | None = None,
     ):
         self._qdrant_url = qdrant_url.rstrip("/") if qdrant_url else None
         self._qdrant_api_key = qdrant_api_key
@@ -51,6 +51,7 @@ class QdrantConnector:
             location=qdrant_url, api_key=qdrant_api_key, path=qdrant_local_path
         )
         self._field_indexes = field_indexes
+        self._reranker = reranker
 
     async def get_collection_names(self) -> list[str]:
         """
@@ -69,26 +70,39 @@ class QdrantConnector:
         """
         collection_name = collection_name or self._default_collection_name
         assert collection_name is not None
+
+        content_preview = (
+            entry.content[:100].replace("\n", " ") + "..."
+            if len(entry.content) > 100
+            else entry.content
+        )
+        logger.info(
+            f"🗄️  Storing entry to collection '{collection_name}': {content_preview}"
+        )
+
         await self._ensure_collection_exists(collection_name)
 
         # Embed the document
-        # ToDo: instead of embedding text explicitly, use `models.Document`,
-        # it should unlock usage of server-side inference.
+        logger.info(f"   🧮 Generating embedding for {len(entry.content)} chars...")
         embeddings = await self._embedding_provider.embed_documents([entry.content])
+        logger.info(f"   ✓ Generated embedding vector (dim: {len(embeddings[0])})")
 
         # Add to Qdrant
         vector_name = self._embedding_provider.get_vector_name()
         payload = {"document": entry.content, METADATA_PATH: entry.metadata}
+        point_id = uuid.uuid4().hex
+        logger.info(f"   💾 Upserting point {point_id[:8]}... to Qdrant...")
         await self._client.upsert(
             collection_name=collection_name,
             points=[
                 models.PointStruct(
-                    id=uuid.uuid4().hex,
+                    id=point_id,
                     vector={vector_name: embeddings[0]},
                     payload=payload,
                 )
             ],
         )
+        logger.info("   ✓ Stored successfully")
 
     async def search(
         self,
@@ -99,7 +113,11 @@ class QdrantConnector:
         query_filter: models.Filter | None = None,
     ) -> list[Entry]:
         """
-        Find points in the Qdrant collection. If there are no entries found, an empty list is returned.
+        Find points in the Qdrant collection with optional reranking.
+
+        If reranker is enabled, retrieves more candidates and reranks them
+        for improved precision.
+
         :param query: The query to use for the search.
         :param collection_name: The name of the collection to search in, optional. If not provided,
                                 the default collection is used.
@@ -109,33 +127,80 @@ class QdrantConnector:
         :return: A list of entries found.
         """
         collection_name = collection_name or self._default_collection_name
+        logger.info(
+            f"🔍 Searching in collection '{collection_name}': '{query[:100]}...' (limit={limit})"
+        )
+
         collection_exists = await self._client.collection_exists(collection_name)
         if not collection_exists:
+            logger.warning(f"   ⚠️  Collection '{collection_name}' does not exist")
             return []
 
         # Embed the query
-        # ToDo: instead of embedding text explicitly, use `models.Document`,
-        # it should unlock usage of server-side inference.
-
+        logger.info("   🧮 Generating query embedding...")
         query_vector = await self._embedding_provider.embed_query(query)
         vector_name = self._embedding_provider.get_vector_name()
+        logger.info(f"   ✓ Query embedding generated (dim: {len(query_vector)})")
+
+        # Determine search limit (retrieve more candidates if reranking)
+        search_limit = limit
+        if self._reranker and self._reranker.is_available():
+            # Retrieve 5x candidates for reranking (e.g., 50 for top-10)
+            search_limit = min(limit * 5, 100)
+            logger.info(f"   🎯 Retrieving {search_limit} candidates for reranking")
 
         # Search in Qdrant
+        logger.info("   🔎 Executing vector search...")
         search_results = await self._client.query_points(
             collection_name=collection_name,
             query=query_vector,
             using=vector_name,
-            limit=limit,
+            limit=search_limit,
             query_filter=query_filter,
         )
+        logger.info(f"   ✓ Search complete: {len(search_results.points)} results found")
 
-        return [
-            Entry(
-                content=result.payload["document"],
-                metadata=result.payload.get("metadata"),
+        # Apply reranking if enabled
+        if (
+            self._reranker
+            and self._reranker.is_available()
+            and len(search_results.points) > limit
+        ):
+            logger.info(
+                f"   🎯 Reranking top {limit} from {len(search_results.points)} candidates..."
             )
-            for result in search_results.points
-        ]
+
+            documents = [result.payload["document"] for result in search_results.points]
+            scores = [result.score for result in search_results.points]
+
+            # Rerank and get top-k indices
+            reranked_indices = await self._reranker.rerank(
+                query, documents, scores, top_k=limit
+            )
+
+            # Return reranked results
+            results = []
+            for idx, score in reranked_indices:
+                result = search_results.points[idx]
+                results.append(
+                    Entry(
+                        content=result.payload["document"],
+                        metadata=result.payload.get("metadata"),
+                    )
+                )
+            logger.info(
+                f"   ✓ Reranking complete: returning top {len(results)} results"
+            )
+            return results
+        else:
+            # Return results without reranking
+            return [
+                Entry(
+                    content=result.payload["document"],
+                    metadata=result.payload.get("metadata"),
+                )
+                for result in search_results.points[:limit]
+            ]
 
     async def _ensure_collection_exists(self, collection_name: str):
         """

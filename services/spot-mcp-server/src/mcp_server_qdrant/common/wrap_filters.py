@@ -2,10 +2,9 @@ import inspect
 from functools import wraps
 from typing import Annotated, Callable, Optional
 
-from pydantic import Field
-
 from mcp_server_qdrant.common.filters import make_filter
 from mcp_server_qdrant.settings import FilterableField
+from pydantic import Field
 
 
 def wrap_filters(

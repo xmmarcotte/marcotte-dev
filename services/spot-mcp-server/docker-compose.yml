@@ -1,0 +1,28 @@
+# Spot MCP Server - Semantic Memory for Cursor IDE
+# Part of marcotte-dev infrastructure
+# Features:
+# - BAAI/bge-large-en-v1.5 embeddings (1024 dims)
+# - Local reranking for precision
+# - Enhanced metadata extraction
+# - Incremental indexing
+version: '3.8'
+
+services:
+  spot-mcp-server:
+    build: .
+    image: spot-mcp-server:latest
+    container_name: spot-mcp-server
+    ports:
+      - "3856:3855"  # MCP HTTP endpoint
+    volumes:
+      - qdrant-data:/app/qdrant-data
+    environment:
+      - QDRANT_LOCAL_PATH=/app/qdrant-data
+      - COLLECTION_NAME=default-collection
+      - EMBEDDING_MODEL=BAAI/bge-large-en-v1.5
+      - FASTMCP_HOST=0.0.0.0
+      - FASTMCP_PORT=3855
+    restart: unless-stopped
+
+volumes:
+  qdrant-data:

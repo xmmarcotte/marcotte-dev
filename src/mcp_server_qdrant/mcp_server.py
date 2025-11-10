@@ -9,8 +9,8 @@ from qdrant_client import models
 
 from mcp_server_qdrant.analysis import (
     CodeAnalyzer,
-    CodeChunker,
     CodebaseScanner,
+    CodeChunker,
     FileHashTracker,
     FileInfo,
     RelationshipMapper,

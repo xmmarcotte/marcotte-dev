@@ -50,9 +50,11 @@ class CodeAnalyzer:
                 for match in matches:
                     endpoints.append(
                         {
-                            "path": match.group(2)
-                            if len(match.groups()) > 1
-                            else match.group(1),
+                            "path": (
+                                match.group(2)
+                                if len(match.groups()) > 1
+                                else match.group(1)
+                            ),
                             "method": method.upper() if method != "route" else "GET",
                             "line": content[: match.start()].count("\n") + 1,
                         }

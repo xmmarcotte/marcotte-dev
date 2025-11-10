@@ -1,8 +1,9 @@
 #!/bin/bash
-# Set up automated rsync backup on Linux laptop
+# Set up automated backups for marcotte-dev via cron
+# Run this on your Linux laptop/desktop that will store backups
 
 ORACLE_IP="${1}"
-BACKUP_DIR="${2:-$HOME/spot-backup}"
+BACKUP_DIR="${2:-$HOME/marcotte-dev-backup}"
 SCHEDULE="${3:-daily}"  # daily, hourly, or custom cron
 
 if [ -z "$ORACLE_IP" ]; then
@@ -13,16 +14,16 @@ if [ -z "$ORACLE_IP" ]; then
   echo "  hourly  - Run every hour"
   echo "  custom  - You'll edit crontab manually"
   echo ""
-  echo "Example: ./setup-cron-backup.sh 123.45.67.89 ~/spot-backup daily"
+  echo "Example: ./setup-cron-backup.sh 100.x.x.x ~/marcotte-dev-backup daily"
   exit 1
 fi
 
 # Get absolute paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BACKUP_SCRIPT="${SCRIPT_DIR}/backup-local.sh"
+BACKUP_SCRIPT="${SCRIPT_DIR}/backup.sh"
 
 if [ ! -f "$BACKUP_SCRIPT" ]; then
-  echo "❌ backup-local.sh not found at: $BACKUP_SCRIPT"
+  echo "❌ backup.sh not found at: $BACKUP_SCRIPT"
   exit 1
 fi
 
@@ -51,7 +52,7 @@ case $SCHEDULE in
     echo ""
     echo "Add this line to your crontab (crontab -e):"
     echo ""
-    echo "# Spot Memory Server backup"
+    echo "# marcotte-dev backup"
     echo "0 3 * * * ${CRON_CMD}"
     echo ""
     echo "Schedule format: MIN HOUR DAY MONTH WEEKDAY"
@@ -69,7 +70,7 @@ case $SCHEDULE in
 esac
 
 # Add to crontab
-(crontab -l 2>/dev/null | grep -v "backup-local.sh"; echo "# Spot Memory Server backup ($DESCRIPTION)"; echo "${CRON_SCHEDULE} ${CRON_CMD}") | crontab -
+(crontab -l 2>/dev/null | grep -v "backup.sh"; echo "# marcotte-dev backup ($DESCRIPTION)"; echo "${CRON_SCHEDULE} ${CRON_CMD}") | crontab -
 
 if [ $? -eq 0 ]; then
   echo "✅ Cron job added successfully!"

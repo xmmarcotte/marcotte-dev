@@ -1,0 +1,38 @@
+# marcotte-dev Services Orchestrator
+# Manages all services running on the Oracle Cloud instance
+version: '3.8'
+
+services:
+  spot-mcp-server:
+    build: ./spot-mcp-server
+    image: spot-mcp-server:latest
+    container_name: spot-mcp-server
+    ports:
+      - "3856:3855"
+    volumes:
+      - spot-mcp-data:/app/qdrant-data
+    environment:
+      - QDRANT_LOCAL_PATH=/app/qdrant-data
+      - COLLECTION_NAME=default-collection
+      - EMBEDDING_MODEL=BAAI/bge-large-en-v1.5
+      - RERANKER_ENABLED=true
+      - RERANKER_MODEL=BAAI/bge-reranker-base
+      - FASTMCP_HOST=0.0.0.0
+      - FASTMCP_PORT=3855
+    restart: unless-stopped
+    networks:
+      - marcotte-dev
+
+  # Future services go here
+  # example-service:
+  #   build: ./example-service
+  #   container_name: example-service
+  #   ...
+
+volumes:
+  spot-mcp-data:
+    driver: local
+
+networks:
+  marcotte-dev:
+    driver: bridge

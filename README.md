@@ -1,325 +1,121 @@
-# Spot Memory Server
+# marcotte-dev
 
-A semantic memory and codebase intelligence server for Cursor IDE, powered by Qdrant vector search.
+Infrastructure and services for my Oracle Cloud Always Free instance.
 
-**Production-tested. Zero cost. Private by default.**
+**Tailscale IP:** `100.x.x.x` (private mesh network)
+**Domain:** `marcotte.dev` (future)
 
-## What Is This?
+## Services
 
-Spot is an MCP (Model Context Protocol) server that gives Claude in Cursor IDE:
-- **Persistent memory** across all your machines
-- **Semantic codebase search** with workspace isolation
-- **Architectural decision tracking** with structured categories
-- **Code pattern recognition** for consistent development
+### [Spot MCP Server](services/spot-mcp-server/)
+Semantic memory and codebase intelligence MCP server for Cursor IDE.
 
-All data is stored in your own Qdrant instance - no external APIs, no data leaves your control.
+**Status:** ✅ Production (tested and deployed)
+**Endpoint:** `http://100.x.x.x:3856/mcp`
+**Tech:** Python, FastMCP, Qdrant, FastEmbed
 
-## Features
+**Features:**
+- Persistent memory across all machines
+- Semantic codebase search with workspace isolation
+- Architectural decision tracking
+- Code pattern recognition
+- AST-based code chunking
+- Incremental indexing with hash-based change detection
 
-### High-Quality Semantic Search
-- **BAAI/bge-large-en-v1.5** embeddings (1024 dimensions)
-- 15-20% better retrieval than baseline models
-- Local reranking for improved precision
-- Optimized for code and technical content
+See [services/spot-mcp-server/README.md](services/spot-mcp-server/README.md) for details.
 
-### Smart Codebase Intelligence
-- AST-based code chunking (preserves context)
-- Function/class signature extraction
-- Framework and pattern detection
-- Quality signals (docstrings, type hints, tests)
+## Infrastructure
 
-### Incremental Indexing
-- Hash-based change detection (only re-index what changed)
-- ~2 second updates for typical changes
-- Workspace isolation for multi-project support
-- Health monitoring and status checks
+### Oracle Cloud Always Free
+- **Instance:** VM.Standard.A1.Flex
+- **CPU:** 4 ARM cores (Ampere Altra)
+- **RAM:** 24GB
+- **Storage:** 200GB boot volume
+- **Cost:** $0/month (free forever)
 
-### Cross-Machine Sync
-- Deploy once to Oracle Cloud Always Free ($0/month)
-- Access from all your machines via Tailscale
-- Automated backups to Linux laptop
-- 15-minute recovery if instance fails
+### Networking
+- **Tailscale:** Private mesh VPN for secure access
+- **Public IP:** Only for initial setup, then Tailscale-only
+- **Firewall:** iptables + Oracle Cloud security lists
 
-## The 7 Tools
+### Backups
+- **Primary:** Automated daily rsync to Linux laptop via Tailscale
+- **Location:** `~/marcotte-dev-backup/` on laptop
+- **Retention:** Single current mirror (fast recovery)
+- **Scripts:** See [scripts/](scripts/)
 
-All tools use the `spot-` prefix:
+## Quick Start
 
-### 1. `spot-store` - Store anything
-Store information with optional categories and metadata.
-
-```python
-# Store a general note
-spot-store(information="Fixed database connection pooling issue with timeout=30")
-
-# Store an architectural decision
-spot-store(
-    information="Decision: Use PostgreSQL over MongoDB. Rationale: Better support for complex queries and ACID compliance.",
-    category="decision",
-    project="my-app",
-    tags="database,architecture"
-)
-
-# Store a coding pattern
-spot-store(
-    information="Pattern: Always use async/await for API calls with try/catch for error handling",
-    category="pattern",
-    language="javascript",
-    tags="async,error-handling"
-)
-```
-
-### 2. `spot-find` - Search everything
-Unified semantic search across all stored content with flexible filtering.
-
-```python
-# Search everything
-spot-find(query="database connection issue")
-
-# Search specific category
-spot-find(query="authentication patterns", category="decision")
-
-# Search with workspace filter
-spot-find(query="error handling", workspace_name="my-app", category="codebase")
-
-# Search with time range
-spot-find(query="recent decisions", category="decision", since="2024-11-01T00:00:00Z")
-
-# Search by tags
-spot-find(query="database", tags="architecture")
-```
-
-Returns results grouped by category: Decisions, Patterns, Code, Memories.
-
-### 3. `spot-index-codebase` - Index your code
-Full codebase indexing with AST-based chunking.
-
-```python
-# Index a workspace (IDE sends file contents)
-spot-index-codebase(
-    files={
-        "src/main.py": "# file content here...",
-        "src/utils.py": "# file content here...",
-        # ... all files
-    },
-    workspace_name="my-app"
-)
-# Output: Indexed 24 files (156 code chunks) from 24 total files. Languages: python, markdown
-```
-
-**Note:** MCP servers are remote - the IDE must send file contents as a dictionary.
-
-### 4. `spot-find-code` - Search code semantically
-Find similar code patterns across your codebase.
-
-```python
-# Find similar functions
-spot-find-code(
-    code_snippet="async def fetch_data",
-    workspace_name="my-app"
-)
-
-# Find where a pattern is used
-spot-find-code(
-    code_snippet="class UserAuthentication",
-    workspace_name="my-app"
-)
-```
-
-Returns code chunks with file paths, line numbers, and context (class/function names).
-
-### 5. `spot-update-files` - Incremental updates
-Fast updates for changed files only.
-
-```python
-# Update specific files after editing
-spot-update-files(
-    files={
-        "src/main.py": "# updated content...",
-        "src/api.py": "# updated content..."
-    },
-    workspace_name="my-app"
-)
-# Output: Updated 2 changed files (12 code chunks) in 1847ms
-```
-
-Uses MD5 hash comparison - only re-indexes files that actually changed.
-
-### 6. `spot-index-status` - Check health
-Monitor your workspace index health.
-
-```python
-spot-index-status(workspace_name="my-app")
-```
-
-```
-📊 Index Status
-
-Workspace: my-app
-Files Tracked: 24
-Last Update: 2 hours ago
-Auto-Index: ✅ Enabled
-
-✅ Index is healthy and current
-```
-
-### 7. `spot-list-workspaces` - List all workspaces
-See all indexed projects.
-
-```python
-spot-list-workspaces()
-```
-
-```
-📋 Indexed Workspaces (3)
-
-• my-app: 24 files, 156 chunks (updated 2 hours ago)
-• client-project: 45 files, 289 chunks (updated yesterday)
-• mcp-server-qdrant: 18 files, 94 chunks (updated just now)
-```
-
-## Installation & Deployment
-
-### Option 1: Local Development
+### Deploy All Services
 
 ```bash
-# Clone the repo
-git clone https://github.com/xmmarcotte/mcp-server-qdrant.git
-cd mcp-server-qdrant
+# From your local machine (must have SSH access to Oracle instance)
+./scripts/deploy.sh <oracle-tailscale-ip>
+```
 
-# Build and run with Docker
+### Deploy Specific Service
+
+```bash
+cd services/spot-mcp-server
 docker-compose up -d
 ```
 
-The server runs on `http://localhost:3856/mcp` (local embedded Qdrant).
-
-### Option 2: Oracle Cloud Always Free (Recommended)
-
-Deploy to Oracle Cloud for **$0/month** with access from all your machines.
-
-**Features:**
-- 24GB RAM, 4 ARM cores, 200GB storage (free forever)
-- Shared memory across all your machines
-- Private access via Tailscale (no public exposure)
-- Automated backup scripts included
-- Full deployment guide: [ORACLE_CLOUD_DEPLOY.md](ORACLE_CLOUD_DEPLOY.md)
-
-**Quick start:**
+### Set Up Backups
 
 ```bash
-# 1. Build ARM64 image and deploy
-./deploy-oracle.sh <your-oracle-public-ip>
-
-# 2. Install Tailscale on Oracle instance and your machines (recommended)
-curl -fsSL https://tailscale.com/install.sh | sh
-sudo tailscale up  # Note the 100.x.x.x IP
-
-# 3. Set up automated backups on Linux laptop
-./setup-cron-backup.sh 100.x.x.x ~/spot-backup daily
-
-# 4. Update mcp.json on all machines (use Tailscale IP)
-{
-  "spot": {
-    "url": "http://100.x.x.x:3856/mcp"
-  }
-}
+# On your Linux laptop
+./scripts/setup-cron-backup.sh 100.x.x.x ~/marcotte-dev-backup daily
 ```
 
-**Backup & Recovery:**
+## Monitoring
+
 ```bash
-# Set up automated daily backup to Linux laptop (use Tailscale IP)
-./setup-cron-backup.sh 100.x.x.x ~/spot-backup daily
+# SSH to instance
+ssh ubuntu@100.x.x.x
 
-# Manual backup anytime
-./backup-local.sh 100.x.x.x ~/spot-backup
+# Check all services
+docker ps
 
-# Restore if needed
-./restore-from-backup.sh ~/spot-backup 100.x.x.x
+# Check specific service
+docker logs -f spot-mcp-server
+
+# Check resources
+htop
+df -h
 ```
 
-### Configure Cursor
+## Documentation
 
-Add to your Cursor `mcp.json`:
+- [Oracle Cloud Setup](docs/SETUP.md) - VM provisioning, Tailscale, security
+- [Architecture](docs/ARCHITECTURE.md) - System design and components
+- [Cursor Integration](docs/CURSOR_INTEGRATION.md) - How to use with Cursor IDE
 
-```json
-{
-  "mcpServers": {
-    "spot": {
-      "url": "http://localhost:3856/mcp",
-      "autoStart": false,
-      "description": "Spot memory server - semantic search and codebase intelligence",
-      "tags": ["spot", "memory", "codebase", "qdrant"]
-    }
-  }
-}
-```
+## Adding a New Service
 
-For Oracle Cloud with Tailscale, replace `localhost:3856` with your Tailscale IP (e.g., `100.x.x.x:3856`).
+1. Create `services/your-service/` directory
+2. Add Dockerfile and service code
+3. Add to `services/docker-compose.yml` if it should orchestrate with others
+4. Update this README
+5. Test locally, then deploy with `./scripts/deploy.sh`
 
-## Configuration
+## Costs
 
-Set these environment variables (in `docker-compose.yml` or your deployment):
+**Current:** $0/month
+**Projection:** $0/month (Always Free tier)
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `QDRANT_LOCAL_PATH` | Path for embedded Qdrant | `/app/qdrant-data` |
-| `COLLECTION_NAME` | Default collection name | `default-collection` |
-| `EMBEDDING_MODEL` | Embedding model to use | `BAAI/bge-large-en-v1.5` |
-| `RERANKER_ENABLED` | Enable local reranking | `true` |
-| `RERANKER_MODEL` | Reranker model | `BAAI/bge-reranker-base` |
-| `FASTMCP_HOST` | Host to bind to | `0.0.0.0` |
-| `FASTMCP_PORT` | Port to listen on | `3855` |
+Oracle Cloud Always Free includes:
+- 2 VM.Standard.A1.Flex instances (4 OCPUs, 24GB RAM total)
+- 200GB boot volumes
+- 10TB/month outbound data transfer
+- Permanent (not trial-based)
 
-**Note:** Use `QDRANT_LOCAL_PATH` for embedded mode (recommended), or `QDRANT_URL` for remote Qdrant.
+## Future Plans
 
-## Cursor Rules
-
-For best results, add these rules to your Cursor settings to guide Claude on when to use Spot:
-
-📄 [CURSOR_RULES.txt](CURSOR_RULES.txt) - Copy this into your Cursor rules
-
-Key points:
-- Call `spot-find` before replying (unless trivial)
-- Call `spot-store` after replying (unless trivial)
-- Use categories: `decision`, `pattern`, `memory`
-- Store technical knowledge automatically
-
-## Architecture
-
-For implementation details, see [ARCHITECTURE.md](ARCHITECTURE.md).
-
-**Key components:**
-- **FastMCP** - MCP server framework
-- **Qdrant** - Vector search engine (embedded mode)
-- **FastEmbed** - Local embeddings (BAAI/bge-large-en-v1.5)
-- **AST-based chunking** - Tree-sitter for code analysis
-
-## Performance
-
-**Search latency:** <1 second
-**Indexing:** ~3-5 seconds for 20 files
-**Incremental updates:** ~2 seconds for typical changes
-**Memory usage:** 500-800MB (embeddings cached)
-**Storage:** ~6KB per code chunk, ~300MB for 50K chunks
-
-## Testing
-
-Spot has been production-tested with:
-- Multiple workspaces (Python, JavaScript)
-- Cross-machine access via Tailscale
-- Automated backups to local machine
-- Real-world code search and memory queries
-
-See the comprehensive test report in git history.
+- [ ] Host at `marcotte.dev` domain
+- [ ] Add monitoring dashboard (Grafana?)
+- [ ] Add more services as needed
+- [ ] Consider multi-region backup
 
 ## License
 
 Apache 2.0
-
-## Credits
-
-Built with:
-- [FastMCP](https://github.com/jlowin/fastmcp) - MCP server framework
-- [Qdrant](https://qdrant.tech/) - Vector search engine
-- [FastEmbed](https://github.com/qdrant/fastembed) - Fast embeddings
-- [Tree-sitter](https://tree-sitter.github.io/) - Code parsing
-- Named after **Spot**, Commander Data's cat 🐱

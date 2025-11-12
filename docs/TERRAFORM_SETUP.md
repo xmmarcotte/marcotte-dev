@@ -58,7 +58,7 @@ You'll need these OCIDs (Oracle Cloud Identifiers):
    private_key_path = "~/.oci/oci_api_key.pem"
    compartment_ocid = "ocid1.compartment.oc1..xxxxx"
    region           = "us-ashburn-1"
-   
+
    # Your SSH public key (contents of ~/.ssh/id_rsa.pub)
    ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC... user@host"
    ```
@@ -184,7 +184,7 @@ Error: unauthorized
 Error: Out of host capacity
 ```
 
-**Solution**: 
+**Solution**:
 - Try a different availability domain
 - Try a different region
 - Wait and try again (free tier instances can be limited)
@@ -246,4 +246,3 @@ After provisioning:
 - [SETUP.md](SETUP.md) - Manual setup guide (for reference)
 - [ORACLE_CLOUD_DEPLOY.md](ORACLE_CLOUD_DEPLOY.md) - Original deployment guide
 - [README.md](../README.md) - Project overview
-

@@ -25,7 +25,7 @@ jobs:
   deploy:
     name: Deploy Infrastructure & Services
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -122,12 +122,12 @@ jobs:
           INSTANCE_IP="${{ steps.get_ip.outputs.instance_ip }}"
           # Try to get Tailscale IP, fallback to public IP
           TAILSCALE_IP=$(ssh -o StrictHostKeyChecking=no ${ORACLE_USER}@${INSTANCE_IP} "tailscale ip -4" 2>/dev/null || echo "${INSTANCE_IP}")
-          
+
           # Setup backup server SSH
           mkdir -p ~/.ssh
           echo "${{ secrets.BACKUP_SSH_KEY }}" > ~/.ssh/backup_key
           chmod 600 ~/.ssh/backup_key
-          
+
           # Run backup via backup server (if configured)
           # This assumes backup server can SSH to Oracle instance
           echo "Backup step - implement based on your backup strategy"
@@ -137,7 +137,7 @@ jobs:
         run: |
           INSTANCE_IP="${{ steps.get_ip.outputs.instance_ip }}"
           TAILSCALE_IP=$(ssh -o StrictHostKeyChecking=no ${ORACLE_USER}@${INSTANCE_IP} "tailscale ip -4" 2>/dev/null || echo "${INSTANCE_IP}")
-          
+
           # Restore step - implement based on your backup strategy
           echo "Restore step - implement based on your backup strategy"
 
@@ -151,10 +151,10 @@ jobs:
         run: |
           INSTANCE_IP="${{ steps.get_ip.outputs.instance_ip }}"
           TAILSCALE_IP=$(ssh -o StrictHostKeyChecking=no ${ORACLE_USER}@${INSTANCE_IP} "tailscale ip -4" 2>/dev/null || echo "${INSTANCE_IP}")
-          
+
           # Use Tailscale IP if available, otherwise public IP
           DEPLOY_IP="${TAILSCALE_IP}"
-          
+
           echo "Deploying to: ${DEPLOY_IP}"
           ./scripts/deploy.sh "${DEPLOY_IP}" all
 
@@ -162,13 +162,13 @@ jobs:
         run: |
           INSTANCE_IP="${{ steps.get_ip.outputs.instance_ip }}"
           TAILSCALE_IP=$(ssh -o StrictHostKeyChecking=no ${ORACLE_USER}@${INSTANCE_IP} "tailscale ip -4" 2>/dev/null || echo "${INSTANCE_IP}")
-          
+
           TEST_IP="${TAILSCALE_IP}"
           echo "Testing deployment at: ${TEST_IP}"
-          
+
           # Wait a bit for services to start
           sleep 10
-          
+
           # Test MCP endpoint
           ssh -o StrictHostKeyChecking=no ${ORACLE_USER}@${INSTANCE_IP} << 'ENDSSH'
             if docker ps | grep -q spot-mcp-server; then
@@ -185,7 +185,7 @@ jobs:
         run: |
           INSTANCE_IP="${{ steps.get_ip.outputs.instance_ip }}"
           TAILSCALE_IP=$(ssh -o StrictHostKeyChecking=no ${ORACLE_USER}@${INSTANCE_IP} "tailscale ip -4" 2>/dev/null || echo "Not configured")
-          
+
           echo "## 🚀 Deployment Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Instance Public IP:** \`${INSTANCE_IP}\`" >> $GITHUB_STEP_SUMMARY
@@ -194,4 +194,3 @@ jobs:
           echo "**MCP Endpoint:** \`http://${TAILSCALE_IP}:3856/mcp\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Test with: \`curl http://${TAILSCALE_IP}:3856/mcp\`" >> $GITHUB_STEP_SUMMARY
-

@@ -17,4 +17,3 @@ region           = "us-ashburn-1"
 
 # Your SSH public key (contents of ~/.ssh/id_rsa.pub or similar)
 ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC... your-email@example.com"
-

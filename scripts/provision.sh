@@ -60,7 +60,7 @@ fi
 CURRENT_IP=""
 if terraform state show oci_core_instance.marcotte_dev &>/dev/null; then
   CURRENT_IP=$(terraform output -raw instance_public_ip 2>/dev/null || echo "")
-  
+
   if [ -n "$CURRENT_IP" ]; then
     echo "Found existing instance at ${CURRENT_IP}"
     echo ""
@@ -112,7 +112,7 @@ while [ $ELAPSED -lt $MAX_WAIT ]; do
     echo -e "${GREEN}✅ cloud-init completed!${NC}"
     break
   fi
-  
+
   echo -n "."
   sleep 10
   ELAPSED=$((ELAPSED + 10))
@@ -190,4 +190,3 @@ echo "  curl http://${TAILSCALE_IP}:3856/mcp"
 echo ""
 echo "Update your Cursor mcp.json with:"
 echo "  http://${TAILSCALE_IP}:3856/mcp"
-

@@ -1,6 +1,6 @@
 terraform {
   required_version = ">= 1.0"
-  
+
   required_providers {
     oci = {
       source  = "oracle/oci"
@@ -85,7 +85,7 @@ resource "oci_core_security_list" "marcotte_dev_security_list" {
     protocol    = "6" # TCP
     source      = "0.0.0.0/0"
     source_type = "CIDR_BLOCK"
-    
+
     tcp_options {
       min = 22
       max = 22
@@ -179,4 +179,3 @@ output "instance_display_name" {
   description = "Display name of the instance"
   value       = oci_core_instance.marcotte_dev.display_name
 }
-

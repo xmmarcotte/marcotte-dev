@@ -161,7 +161,7 @@ The workflow can cache Terraform state (add to workflow):
 
 **Error**: `Out of host capacity`
 
-**Solution**: 
+**Solution**:
 - Try a different region
 - Wait and retry (free tier instances can be limited)
 
@@ -253,5 +253,3 @@ Then use in Terraform:
 - [Terraform Setup](TERRAFORM_SETUP.md) - Manual Terraform setup
 - [Oracle Cloud Setup](SETUP.md) - Manual deployment guide
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
-
-

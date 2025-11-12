@@ -39,4 +39,3 @@ variable "tailscale_auth_key" {
   default     = ""
   sensitive   = true
 }
-

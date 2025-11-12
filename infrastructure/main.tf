@@ -22,9 +22,9 @@ data "oci_identity_availability_domains" "ads" {
   compartment_id = var.tenancy_ocid
 }
 
-# Get the first availability domain
+# Get the third availability domain (AD-3)
 locals {
-  ad_name = data.oci_identity_availability_domains.ads.availability_domains[0].name
+  ad_name = data.oci_identity_availability_domains.ads.availability_domains[2].name
 }
 
 # VCN
@@ -65,7 +65,7 @@ resource "oci_core_subnet" "marcotte_dev_subnet" {
   vcn_id            = oci_core_vcn.marcotte_dev_vcn.id
   cidr_block        = "10.0.1.0/24"
   display_name      = "marcotte-dev-subnet"
-  dns_label         = "marcottedevsubnet"
+  dns_label         = "marcottesubnet"
   security_list_ids = [oci_core_security_list.marcotte_dev_security_list.id]
   route_table_id    = oci_core_vcn.marcotte_dev_vcn.default_route_table_id
 

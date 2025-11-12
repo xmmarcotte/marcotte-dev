@@ -1,0 +1,20 @@
+# Copy this file to terraform.tfvars and fill in your values
+# DO NOT commit terraform.tfvars to git (it contains sensitive data)
+
+# Get these from Oracle Cloud Console:
+# - tenancy_ocid: Tenancy -> Tenancy Details
+# - user_ocid: Identity -> Users -> Your User -> OCID
+# - compartment_ocid: Identity -> Compartments -> Your Compartment -> OCID
+# - fingerprint: Identity -> Users -> Your User -> API Keys -> Fingerprint
+# - region: Use the region code (e.g., us-ashburn-1, us-phoenix-1)
+
+tenancy_ocid     = "ocid1.tenancy.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+user_ocid        = "ocid1.user.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+fingerprint      = "xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx"
+private_key_path = "~/.oci/oci_api_key.pem"
+compartment_ocid = "ocid1.compartment.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+region           = "us-ashburn-1"
+
+# Your SSH public key (contents of ~/.ssh/id_rsa.pub or similar)
+ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC... your-email@example.com"
+

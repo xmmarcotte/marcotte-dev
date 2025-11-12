@@ -1,0 +1,43 @@
+#cloud-config
+# Cloud-init script for marcotte-dev Oracle Cloud instance
+# Installs Docker, Tailscale, and prepares the system
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - curl
+  - wget
+  - git
+  - htop
+  - unattended-upgrades
+
+# Install Docker
+runcmd:
+  # Install Docker
+  - curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+  - sh /tmp/get-docker.sh
+  - usermod -aG docker ubuntu
+  
+  # Install Tailscale
+  - curl -fsSL https://tailscale.com/install.sh | sh
+  # Tailscale auth key will be injected here if provided via Terraform variable
+  
+  # Create directories for services
+  - mkdir -p /home/ubuntu/qdrant-data
+  - chown -R ubuntu:ubuntu /home/ubuntu/qdrant-data
+  - chmod 755 /home/ubuntu/qdrant-data
+  
+  # Create marker file to indicate cloud-init completed
+  - touch /home/ubuntu/.cloud-init-complete
+  - chown ubuntu:ubuntu /home/ubuntu/.cloud-init-complete
+
+# Write final message
+final_message: |
+  marcotte-dev cloud-init completed successfully!
+  Next steps:
+  1. SSH to the instance
+  2. Run: sudo tailscale up
+  3. Note the Tailscale IP
+  4. Run: ./scripts/provision.sh (from your local machine)
+

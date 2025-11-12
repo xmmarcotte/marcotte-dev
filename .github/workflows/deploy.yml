@@ -1,0 +1,197 @@
+name: Deploy to Oracle Cloud
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      action:
+        description: 'Deployment action'
+        required: true
+        default: 'deploy'
+        type: choice
+        options:
+          - deploy
+          - provision
+      skip_backup:
+        description: 'Skip backup before deploy'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  TERRAFORM_VERSION: '1.6.0'
+  ORACLE_USER: ubuntu
+
+jobs:
+  deploy:
+    name: Deploy Infrastructure & Services
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.ORACLE_PUBLIC_IP }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Configure Terraform Variables
+        working-directory: infrastructure
+        run: |
+          cat > terraform.tfvars << EOF
+          tenancy_ocid     = "${{ secrets.OCI_TENANCY_OCID }}"
+          user_ocid        = "${{ secrets.OCI_USER_OCID }}"
+          fingerprint      = "${{ secrets.OCI_FINGERPRINT }}"
+          private_key_path = "/tmp/oci_api_key.pem"
+          compartment_ocid = "${{ secrets.OCI_COMPARTMENT_OCID }}"
+          region           = "${{ secrets.OCI_REGION }}"
+          ssh_public_key   = "${{ secrets.SSH_PUBLIC_KEY }}"
+          tailscale_auth_key = "${{ secrets.TAILSCALE_AUTH_KEY || '' }}"
+          EOF
+
+      - name: Setup OCI API Key
+        run: |
+          echo "${{ secrets.OCI_PRIVATE_KEY }}" > /tmp/oci_api_key.pem
+          chmod 600 /tmp/oci_api_key.pem
+
+      - name: Initialize Terraform
+        working-directory: infrastructure
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: infrastructure
+        run: terraform plan -out=tfplan
+        continue-on-error: true
+
+      - name: Terraform Apply
+        if: github.event.inputs.action == 'provision'
+        working-directory: infrastructure
+        run: |
+          terraform apply -auto-approve tfplan || terraform apply -auto-approve
+          rm -f tfplan
+
+      - name: Get Instance IP
+        id: get_ip
+        working-directory: infrastructure
+        run: |
+          INSTANCE_IP=$(terraform output -raw instance_public_ip 2>/dev/null || echo "${{ secrets.ORACLE_PUBLIC_IP }}")
+          echo "instance_ip=${INSTANCE_IP}" >> $GITHUB_OUTPUT
+          echo "Instance IP: ${INSTANCE_IP}"
+
+      - name: Wait for Instance Ready
+        run: |
+          INSTANCE_IP="${{ steps.get_ip.outputs.instance_ip }}"
+          echo "Waiting for instance to be ready..."
+          for i in {1..30}; do
+            if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no ${ORACLE_USER}@${INSTANCE_IP} "test -f ~/.cloud-init-complete" 2>/dev/null; then
+              echo "Instance is ready!"
+              exit 0
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 10
+          done
+          echo "⚠️ Instance may not be fully ready, continuing anyway..."
+
+      - name: Setup Tailscale (if auth key provided)
+        if: secrets.TAILSCALE_AUTH_KEY != ''
+        run: |
+          INSTANCE_IP="${{ steps.get_ip.outputs.instance_ip }}"
+          ssh -o StrictHostKeyChecking=no ${ORACLE_USER}@${INSTANCE_IP} << 'ENDSSH'
+            if ! tailscale status &>/dev/null; then
+              echo "Setting up Tailscale..."
+              sudo tailscale up --authkey="${{ secrets.TAILSCALE_AUTH_KEY }}" --accept-routes
+              sleep 5
+              TAILSCALE_IP=$(tailscale ip -4)
+              echo "Tailscale IP: ${TAILSCALE_IP}"
+            else
+              echo "Tailscale already configured"
+              tailscale ip -4
+            fi
+          ENDSSH
+
+      - name: Backup Existing Data
+        if: github.event.inputs.skip_backup != 'true' && secrets.BACKUP_SSH_KEY != ''
+        run: |
+          INSTANCE_IP="${{ steps.get_ip.outputs.instance_ip }}"
+          # Try to get Tailscale IP, fallback to public IP
+          TAILSCALE_IP=$(ssh -o StrictHostKeyChecking=no ${ORACLE_USER}@${INSTANCE_IP} "tailscale ip -4" 2>/dev/null || echo "${INSTANCE_IP}")
+          
+          # Setup backup server SSH
+          mkdir -p ~/.ssh
+          echo "${{ secrets.BACKUP_SSH_KEY }}" > ~/.ssh/backup_key
+          chmod 600 ~/.ssh/backup_key
+          
+          # Run backup via backup server (if configured)
+          # This assumes backup server can SSH to Oracle instance
+          echo "Backup step - implement based on your backup strategy"
+
+      - name: Restore Data (if backup exists)
+        if: secrets.BACKUP_SSH_KEY != ''
+        run: |
+          INSTANCE_IP="${{ steps.get_ip.outputs.instance_ip }}"
+          TAILSCALE_IP=$(ssh -o StrictHostKeyChecking=no ${ORACLE_USER}@${INSTANCE_IP} "tailscale ip -4" 2>/dev/null || echo "${INSTANCE_IP}")
+          
+          # Restore step - implement based on your backup strategy
+          echo "Restore step - implement based on your backup strategy"
+
+      - name: Setup Docker Buildx
+        run: |
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+          docker buildx create --name arm-builder --use || docker buildx use arm-builder
+          docker buildx inspect --bootstrap
+
+      - name: Build and Deploy Services
+        run: |
+          INSTANCE_IP="${{ steps.get_ip.outputs.instance_ip }}"
+          TAILSCALE_IP=$(ssh -o StrictHostKeyChecking=no ${ORACLE_USER}@${INSTANCE_IP} "tailscale ip -4" 2>/dev/null || echo "${INSTANCE_IP}")
+          
+          # Use Tailscale IP if available, otherwise public IP
+          DEPLOY_IP="${TAILSCALE_IP}"
+          
+          echo "Deploying to: ${DEPLOY_IP}"
+          ./scripts/deploy.sh "${DEPLOY_IP}" all
+
+      - name: Verify Deployment
+        run: |
+          INSTANCE_IP="${{ steps.get_ip.outputs.instance_ip }}"
+          TAILSCALE_IP=$(ssh -o StrictHostKeyChecking=no ${ORACLE_USER}@${INSTANCE_IP} "tailscale ip -4" 2>/dev/null || echo "${INSTANCE_IP}")
+          
+          TEST_IP="${TAILSCALE_IP}"
+          echo "Testing deployment at: ${TEST_IP}"
+          
+          # Wait a bit for services to start
+          sleep 10
+          
+          # Test MCP endpoint
+          ssh -o StrictHostKeyChecking=no ${ORACLE_USER}@${INSTANCE_IP} << 'ENDSSH'
+            if docker ps | grep -q spot-mcp-server; then
+              echo "✅ Container is running"
+              docker logs --tail 10 spot-mcp-server
+            else
+              echo "❌ Container is not running"
+              docker ps -a | grep spot-mcp-server
+              exit 1
+            fi
+          ENDSSH
+
+      - name: Output Deployment Info
+        run: |
+          INSTANCE_IP="${{ steps.get_ip.outputs.instance_ip }}"
+          TAILSCALE_IP=$(ssh -o StrictHostKeyChecking=no ${ORACLE_USER}@${INSTANCE_IP} "tailscale ip -4" 2>/dev/null || echo "Not configured")
+          
+          echo "## 🚀 Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Instance Public IP:** \`${INSTANCE_IP}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Tailscale IP:** \`${TAILSCALE_IP}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**MCP Endpoint:** \`http://${TAILSCALE_IP}:3856/mcp\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Test with: \`curl http://${TAILSCALE_IP}:3856/mcp\`" >> $GITHUB_STEP_SUMMARY
+

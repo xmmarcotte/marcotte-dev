@@ -166,3 +166,13 @@ cython_debug/
 
 # Local development directory (never commit)
 .local-dev/
+
+# Terraform
+infrastructure/.terraform/
+infrastructure/*.tfstate
+infrastructure/*.tfstate.*
+infrastructure/.terraform.lock.hcl
+infrastructure/terraform.tfvars
+infrastructure/*.auto.tfvars
+infrastructure/crash.log
+infrastructure/crash.*.log

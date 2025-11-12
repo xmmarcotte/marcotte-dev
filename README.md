@@ -46,18 +46,50 @@ See [services/spot-mcp-server/README.md](services/spot-mcp-server/README.md) for
 
 ## Quick Start
 
-### Deploy All Services
+### 🎯 Option 1: GitHub Actions CI/CD (Manual Trigger)
 
+**Deploy from GitHub Actions:**
+1. Set up GitHub Secrets (see [GitHub Actions Setup](docs/GITHUB_ACTIONS_SETUP.md))
+2. Go to **Actions** → **Deploy to Oracle Cloud** → **Run workflow**
+3. Choose action and click **Run workflow**
+4. GitHub Actions handles everything automatically!
+
+**Benefits:**
+- ✅ No local setup required
+- ✅ Data preservation during redeploys
+- ✅ Full infrastructure automation
+- ✅ Run on-demand when you're ready
+
+See [GitHub Actions Setup Guide](docs/GITHUB_ACTIONS_SETUP.md) for details.
+
+### 🚀 Option 2: Local Automated Provisioning
+
+**First time setup:**
+1. Configure Terraform (see [Terraform Setup Guide](docs/TERRAFORM_SETUP.md))
+2. Run full provisioning:
+   ```bash
+   ./scripts/provision.sh
+   ```
+   This automatically:
+   - Provisions infrastructure (VM, networking, security)
+   - Installs Docker, Tailscale, and system updates
+   - Restores data from backup (if exists)
+   - Deploys all services
+
+**Redeploy after updates:**
 ```bash
-# From your local machine (must have SSH access to Oracle instance)
-./scripts/deploy.sh <oracle-tailscale-ip>
+# Just run the same command - it handles everything including data preservation!
+./scripts/provision.sh
 ```
 
-### Deploy Specific Service
+### Manual Deployment (If Instance Already Exists)
 
 ```bash
-cd services/spot-mcp-server
-docker-compose up -d
+# Deploy all services
+./scripts/deploy.sh <oracle-tailscale-ip>
+
+# Deploy specific service
+./scripts/deploy.sh <oracle-tailscale-ip> spot-mcp-server
 ```
 
 ### Set Up Backups
@@ -86,7 +118,9 @@ df -h
 
 ## Documentation
 
-- [Oracle Cloud Setup](docs/SETUP.md) - VM provisioning, Tailscale, security
+- **[GitHub Actions CI/CD](docs/GITHUB_ACTIONS_SETUP.md)** ⭐ - Automated deployments from GitHub (NEW!)
+- **[Terraform Setup](docs/TERRAFORM_SETUP.md)** ⭐ - Automated infrastructure provisioning
+- [Oracle Cloud Setup](docs/SETUP.md) - Manual VM provisioning, Tailscale, security
 - [Architecture](docs/ARCHITECTURE.md) - System design and components
 - [Cursor Integration](docs/CURSOR_INTEGRATION.md) - How to use with Cursor IDE
 

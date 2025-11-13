@@ -11,7 +11,7 @@ Add to your `~/.cursor/mcp.json` (or wherever your Cursor config is):
   "mcpServers": {
     "spot": {
       "url": "http://100.x.x.x:3856/mcp",
-      "autoStart": false,
+      "autoStart": true,
       "description": "Spot MCP Server - semantic memory across all machines",
       "tags": ["spot", "memory", "codebase", "marcotte-dev"]
     }

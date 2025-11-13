@@ -2,7 +2,8 @@
 
 Infrastructure and services for my Oracle Cloud Always Free instance.
 
-**Tailscale IP:** `100.x.x.x` (private mesh network)
+**Tailscale IP:** `<TAILSCALE_IP>` (private mesh network - see GitHub Secrets)
+**Public IP:** `<PUBLIC_IP>` (Oracle Cloud - see GitHub Secrets)
 **Domain:** `marcotte.dev` (future)
 
 ## Services
@@ -10,8 +11,8 @@ Infrastructure and services for my Oracle Cloud Always Free instance.
 ### [Spot MCP Server](services/spot-mcp-server/)
 Semantic memory and codebase intelligence MCP server for Cursor IDE.
 
-**Status:** ✅ Production (tested and deployed)
-**Endpoint:** `http://100.x.x.x:3856/mcp`
+**Status:** ✅ Production (deployed and running)
+**Endpoint:** `http://<TAILSCALE_IP>:3856/mcp`
 **Tech:** Python, FastMCP, Qdrant, FastEmbed
 
 **Features:**
@@ -40,7 +41,8 @@ See [services/spot-mcp-server/README.md](services/spot-mcp-server/README.md) for
 
 ### Backups
 - **Primary:** Automated daily rsync to Linux laptop via Tailscale
-- **Location:** `~/marcotte-dev-backup/` on laptop
+- **Location:** `~/.marcotte-dev-backup/` on laptop
+- **Schedule:** Daily at 3:00 AM
 - **Retention:** Single current mirror (fast recovery)
 - **Scripts:** See [scripts/](scripts/)
 
@@ -96,14 +98,17 @@ See [GitHub Actions Setup Guide](docs/GITHUB_ACTIONS_SETUP.md) for details.
 
 ```bash
 # On your Linux laptop
-./scripts/setup-cron-backup.sh 100.x.x.x ~/marcotte-dev-backup daily
+./scripts/setup-cron-backup.sh <TAILSCALE_IP> ~/.marcotte-dev-backup daily
 ```
 
 ## Monitoring
 
 ```bash
-# SSH to instance
-ssh ubuntu@100.x.x.x
+# SSH to instance (via Tailscale - recommended)
+ssh ubuntu@<TAILSCALE_IP>
+
+# Or via public IP
+ssh ubuntu@<PUBLIC_IP>
 
 # Check all services
 docker ps
@@ -118,11 +123,12 @@ df -h
 
 ## Documentation
 
-- **[GitHub Actions CI/CD](docs/GITHUB_ACTIONS_SETUP.md)** ⭐ - Automated deployments from GitHub (NEW!)
-- **[Terraform Setup](docs/TERRAFORM_SETUP.md)** ⭐ - Automated infrastructure provisioning
-- [Oracle Cloud Setup](docs/SETUP.md) - Manual VM provisioning, Tailscale, security
+- **[Cursor Integration](docs/CURSOR_INTEGRATION.md)** - How to use Spot with Cursor IDE
+- **[GitHub Actions Deployment](docs/GITHUB_ACTIONS_SETUP.md)** - Automated deployments from GitHub
+- **[GitHub Secrets Setup](docs/GITHUB_SECRETS.md)** - Quick guide to configure CI/CD secrets
 - [Architecture](docs/ARCHITECTURE.md) - System design and components
-- [Cursor Integration](docs/CURSOR_INTEGRATION.md) - How to use with Cursor IDE
+- [Terraform Setup](docs/TERRAFORM_SETUP.md) - Infrastructure as Code
+- [Oracle Cloud Setup](docs/SETUP.md) - Manual provisioning reference
 
 ## Adding a New Service
 
@@ -132,10 +138,12 @@ df -h
 4. Update this README
 5. Test locally, then deploy with `./scripts/deploy.sh`
 
-## Costs
+## Current Status
 
-**Current:** $0/month
-**Projection:** $0/month (Always Free tier)
+**Instance:** ✅ Deployed and running
+**Services:** ✅ Spot MCP Server operational
+**Backups:** ✅ Automated daily backups configured
+**Cost:** $0/month (Always Free tier)
 
 Oracle Cloud Always Free includes:
 - 2 VM.Standard.A1.Flex instances (4 OCPUs, 24GB RAM total)

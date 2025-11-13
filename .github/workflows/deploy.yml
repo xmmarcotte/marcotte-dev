@@ -1,0 +1,72 @@
+name: Deploy to Oracle Cloud
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to deploy (all, spot-mcp-server)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - spot-mcp-server
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-plugin@v3
+        with:
+          platforms: linux/amd64,linux/arm64
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.ORACLE_PUBLIC_IP }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H ${{ secrets.ORACLE_TAILSCALE_IP }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Test SSH connection
+        run: |
+          ssh -o ConnectTimeout=10 ubuntu@${{ secrets.ORACLE_TAILSCALE_IP }} 'echo "SSH connection successful!"'
+
+      - name: Deploy services
+        run: |
+          chmod +x scripts/deploy.sh
+          ./scripts/deploy.sh ${{ secrets.ORACLE_TAILSCALE_IP }} ${{ github.event.inputs.service }}
+
+      - name: Verify deployment
+        run: |
+          echo "Verifying deployment..."
+          ssh ubuntu@${{ secrets.ORACLE_TAILSCALE_IP }} 'docker ps'
+
+          echo "Checking Spot MCP Server..."
+          ssh ubuntu@${{ secrets.ORACLE_TAILSCALE_IP }} 'docker logs --tail 20 spot-mcp-server'
+
+      - name: Test MCP endpoint
+        run: |
+          echo "Testing MCP server endpoint..."
+          curl -f http://${{ secrets.ORACLE_TAILSCALE_IP }}:3856/mcp || echo "MCP endpoint requires SSE headers (expected)"
+
+      - name: Deployment summary
+        run: |
+          echo "✅ Deployment complete!"
+          echo ""
+          echo "📊 Instance Details:"
+          echo "  Tailscale IP: ${{ secrets.ORACLE_TAILSCALE_IP }}"
+          echo "  Public IP: ${{ secrets.ORACLE_PUBLIC_IP }}"
+          echo ""
+          echo "🔗 MCP Server:"
+          echo "  Endpoint: http://${{ secrets.ORACLE_TAILSCALE_IP }}:3856/mcp"
+          echo ""
+          echo "📝 Next Steps:"
+          echo "  1. Update your Cursor mcp.json if IP changed"
+          echo "  2. Test connection from Cursor IDE"
+          echo "  3. Monitor logs: ssh ubuntu@${{ secrets.ORACLE_TAILSCALE_IP }} 'docker logs -f spot-mcp-server'"

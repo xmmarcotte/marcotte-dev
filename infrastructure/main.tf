@@ -31,12 +31,11 @@ locals {
 resource "oci_core_vcn" "marcotte_dev_vcn" {
   compartment_id = var.compartment_ocid
   cidr_blocks    = ["10.0.0.0/16"]
-  display_name   = "marcotte-dev-vcn"
+  display_name   = "marcotte-dev"
   dns_label      = "marcottedev"
 
-  freeform_tags = {
-    Project = "marcotte-dev"
-    Managed = "terraform"
+  lifecycle {
+    ignore_changes = [defined_tags, freeform_tags]
   }
 }
 
@@ -65,12 +64,12 @@ resource "oci_core_subnet" "marcotte_dev_subnet" {
   vcn_id            = oci_core_vcn.marcotte_dev_vcn.id
   cidr_block        = "10.0.1.0/24"
   display_name      = "marcotte-dev-subnet"
-  dns_label         = "marcottesubnet"
+  dns_label         = "marcottedevsubn"  # Must match existing
   security_list_ids = [oci_core_security_list.marcotte_dev_security_list.id]
   route_table_id    = oci_core_vcn.marcotte_dev_vcn.default_route_table_id
 
-  freeform_tags = {
-    Project = "marcotte-dev"
+  lifecycle {
+    ignore_changes = [defined_tags, freeform_tags]
   }
 }
 
@@ -78,7 +77,7 @@ resource "oci_core_subnet" "marcotte_dev_subnet" {
 resource "oci_core_security_list" "marcotte_dev_security_list" {
   compartment_id = var.compartment_ocid
   vcn_id         = oci_core_vcn.marcotte_dev_vcn.id
-  display_name   = "marcotte-dev-security-list"
+  display_name   = "Default Security List for marcotte-dev"
 
   # Allow SSH from anywhere (for initial setup)
   ingress_security_rules {
@@ -99,8 +98,8 @@ resource "oci_core_security_list" "marcotte_dev_security_list" {
     destination_type = "CIDR_BLOCK"
   }
 
-  freeform_tags = {
-    Project = "marcotte-dev"
+  lifecycle {
+    ignore_changes = [defined_tags, freeform_tags, ingress_security_rules]
   }
 }
 
@@ -145,7 +144,7 @@ resource "oci_core_instance" "marcotte_dev" {
   create_vnic_details {
     subnet_id        = oci_core_subnet.marcotte_dev_subnet.id
     assign_public_ip = true
-    display_name     = "marcotte-dev-vnic"
+    display_name     = "marcotte-dev"
   }
 
   source_details {
@@ -158,9 +157,20 @@ resource "oci_core_instance" "marcotte_dev" {
     user_data          = base64encode(local.cloud_init)
   }
 
-  freeform_tags = {
-    Project = "marcotte-dev"
-    Managed = "terraform"
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes = [
+      defined_tags,
+      freeform_tags,
+      metadata,
+      source_details,
+      agent_config,
+      availability_config,
+      instance_options,
+      launch_options,
+      platform_config,
+      preemptible_instance_config
+    ]
   }
 }
 

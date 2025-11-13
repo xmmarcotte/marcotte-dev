@@ -176,3 +176,7 @@ infrastructure/terraform.tfvars
 infrastructure/*.auto.tfvars
 infrastructure/crash.log
 infrastructure/crash.*.log
+
+# Terraform import scripts (contain OCIDs)
+infrastructure/import-*.sh
+infrastructure/resource-ids.txt

@@ -24,7 +24,7 @@ data "oci_identity_availability_domains" "ads" {
 
 # Get the third availability domain (AD-3)
 locals {
-  ad_name = data.oci_identity_availability_domains.ads.availability_domains[2].name
+  ad_name = data.oci_identity_availability_domains.ads.availability_domains[0].name
 }
 
 # VCN

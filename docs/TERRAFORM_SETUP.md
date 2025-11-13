@@ -238,11 +238,11 @@ All resources created are within Oracle Cloud Always Free tier:
 
 After provisioning:
 1. Update your Cursor `mcp.json` with the Tailscale IP
-2. Set up automated backups: `./scripts/setup-cron-backup.sh <tailscale-ip> ~/marcotte-dev-backup daily`
+2. Set up automated backups: `./scripts/setup-systemd-backup.sh <tailscale-ip> ~/.marcotte-dev-backup`
 3. Test the deployment: `curl http://<tailscale-ip>:3856/mcp`
 
 ## See Also
 
-- [SETUP.md](SETUP.md) - Manual setup guide (for reference)
-- [ORACLE_CLOUD_DEPLOY.md](ORACLE_CLOUD_DEPLOY.md) - Original deployment guide
 - [README.md](../README.md) - Project overview
+- [CURSOR_INTEGRATION.md](CURSOR_INTEGRATION.md) - Cursor IDE setup
+- [GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md) - CI/CD deployment

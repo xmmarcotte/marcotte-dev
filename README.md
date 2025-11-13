@@ -40,9 +40,10 @@ See [services/spot-mcp-server/README.md](services/spot-mcp-server/README.md) for
 - **Firewall:** iptables + Oracle Cloud security lists
 
 ### Backups
-- **Primary:** Automated daily rsync to Linux laptop via Tailscale
-- **Location:** `~/.marcotte-dev-backup/` on laptop
-- **Schedule:** Daily at 3:00 AM
+- **Primary:** Automated daily rsync to local machine via Tailscale
+- **Location:** `~/.marcotte-dev-backup/` on your laptop/desktop
+- **Schedule:** Daily at 2:00 AM (with catch-up on boot if missed)
+- **Method:** Systemd timer (runs on your local machine)
 - **Retention:** Single current mirror (fast recovery)
 - **Scripts:** See [scripts/](scripts/)
 
@@ -96,10 +97,17 @@ See [GitHub Actions Setup Guide](docs/GITHUB_ACTIONS_SETUP.md) for details.
 
 ### Set Up Backups
 
+**Run on your local machine (laptop/desktop):**
 ```bash
-# On your Linux laptop
-./scripts/setup-cron-backup.sh <TAILSCALE_IP> ~/.marcotte-dev-backup daily
+# Systemd timer - runs daily at 2 AM, catches up on boot if missed
+./scripts/setup-systemd-backup.sh <TAILSCALE_IP> ~/.marcotte-dev-backup
 ```
+
+**Why this works:**
+- ✅ Runs missed backups when you boot up (laptop was off at 2 AM? No problem!)
+- ✅ Prevents duplicate runs if you reboot multiple times
+- ✅ Pulls data from Oracle instance via Tailscale (secure)
+- ✅ Easy to monitor with `systemctl --user list-timers`
 
 ## Monitoring
 
@@ -128,7 +136,6 @@ df -h
 - **[GitHub Secrets Setup](docs/GITHUB_SECRETS.md)** - Quick guide to configure CI/CD secrets
 - [Architecture](docs/ARCHITECTURE.md) - System design and components
 - [Terraform Setup](docs/TERRAFORM_SETUP.md) - Infrastructure as Code
-- [Oracle Cloud Setup](docs/SETUP.md) - Manual provisioning reference
 
 ## Adding a New Service
 

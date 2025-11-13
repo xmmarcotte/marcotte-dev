@@ -13,11 +13,14 @@ Run these commands on your Linux laptop to get the values you'll need:
 cat ~/.ssh/id_rsa
 # Copy the ENTIRE output including "-----BEGIN" and "-----END" lines
 
-# Get your Tailscale IP (should output: 100.87.243.40)
-ssh ubuntu@132.145.223.172 'tailscale ip -4'
+# Get your Tailscale IP from .env file
+grep INSTANCE_TAILSCALE_IP .env | cut -d'=' -f2
 
-# Get your public IP (you already know this: 132.145.223.172)
-echo "132.145.223.172"
+# Get your public IP from .env file
+grep INSTANCE_PUBLIC_IP .env | cut -d'=' -f2
+
+# Or SSH to get Tailscale IP directly
+ssh ubuntu@<PUBLIC_IP> 'tailscale ip -4'
 ```
 
 ### 2. Navigate to GitHub Secrets
@@ -44,12 +47,12 @@ Add these three secrets one by one:
 
 #### Secret 2: ORACLE_TAILSCALE_IP
 - **Name:** `ORACLE_TAILSCALE_IP`
-- **Value:** `100.87.243.40` (your instance's Tailscale IP)
+- **Value:** Your instance's Tailscale IP (get from `.env` file: `INSTANCE_TAILSCALE_IP`)
 - Click **Add secret**
 
 #### Secret 3: ORACLE_PUBLIC_IP
 - **Name:** `ORACLE_PUBLIC_IP`
-- **Value:** `132.145.223.172` (your instance's public IP)
+- **Value:** Your instance's public IP (get from `.env` file: `INSTANCE_PUBLIC_IP`)
 - Click **Add secret**
 
 ### 4. Verify Secrets Are Set
@@ -102,7 +105,7 @@ Expected duration: ~10-15 minutes (ARM64 cross-compilation is slow)
 
 ### "Permission denied (publickey)" Error
 - Your `SSH_PRIVATE_KEY` doesn't match the public key on the instance
-- Verify: `ssh -i ~/.ssh/id_rsa ubuntu@132.145.223.172 'echo success'`
+- Verify: `ssh -i ~/.ssh/id_rsa ubuntu@<PUBLIC_IP> 'echo success'`
 
 ### Workflow Fails on "Set up Docker Buildx"
 - This is a transient GitHub Actions issue
@@ -122,7 +125,7 @@ Once GitHub secrets are configured:
 
 **Option 3: Local deployments** (still works)
 ```bash
-./scripts/deploy.sh 100.87.243.40
+./scripts/deploy.sh <TAILSCALE_IP>
 ```
 
 All three methods will work! Choose what's most convenient.

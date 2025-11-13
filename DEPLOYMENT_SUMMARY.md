@@ -17,9 +17,9 @@
 - ✅ Reranking enabled
 
 ### 3. **Backups Configured**
-- ✅ Automated daily backups at 3:00 AM
+- ✅ Automated daily backups at 2:00 AM (with catch-up on boot)
 - ✅ Destination: ~/.marcotte-dev-backup/
-- ✅ Method: rsync over Tailscale
+- ✅ Method: systemd timer with rsync over Tailscale
 
 ### 4. **Repository Cleaned**
 #### Deleted Outdated Files:
@@ -125,7 +125,7 @@ marcotte-dev/
 │   ├── deploy.sh
 │   ├── provision.sh
 │   ├── restore.sh
-│   └── setup-cron-backup.sh
+│   └── setup-systemd-backup.sh
 ├── services/spot-mcp-server/
 │   ├── Dockerfile                 # ARM64 build config (NEW)
 │   ├── docker-compose.yml

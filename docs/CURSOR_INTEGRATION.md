@@ -23,42 +23,115 @@ Replace `100.x.x.x` with your Oracle instance's Tailscale IP.
 
 ## Cursor Rules
 
-Add these rules to your Cursor settings to guide Claude on when to use Spot tools:
+Add these rules to your Cursor settings (Settings → General → Rules for AI) to guide Claude on automatic Spot tool usage:
 
 ```
-Always call `spot-find` before replying unless the user request is purely trivial or formatting-related
+# SPOT MCP INTEGRATION - Automatic Memory & Codebase Intelligence
 
-Always call `spot-store` after replying unless the response is trivial, redundant, or only about style or tone
+You have access to Spot MCP tools for persistent memory and semantic codebase search. Use them proactively and liberally.
 
-Use `spot-find` when:
-- The user asks about something previously discussed (e.g. "you said", "last time", "remind me", "what did we do")
-- The request builds on earlier configs, logs, code, or decisions
-- The question spans multiple systems, files, or workflows
-- The user is following up on a fix, ticket, or script
-- Additional memory could improve the clarity or accuracy of the answer
+## Core Workflow (Follow This Pattern)
 
-Use `spot-store` when:
-- The response includes useful technical knowledge worth recalling later:
-  - Configuration values
-  - Environment variables
-  - Startup scripts
-  - Logs
-  - Workflow explanations
-  - Architecture decisions
-  - Troubleshooting outcomes
-- The response would help answer future "when did we..." or "how did we..." questions
+1. **SEARCH FIRST** - Call `spot-find` before answering ANY non-trivial request
+2. **ANSWER** - Provide your response using found context
+3. **STORE AFTER** - Call `spot-store` to remember important information
 
-Use categories with `spot-store` for better organization:
-- `category="decision"` - Architectural decisions, technology choices, trade-offs
-- `category="pattern"` - Coding patterns, best practices, conventions
-- `category="memory"` - General notes, observations (default)
+When in doubt, USE the tools. Over-using is better than under-using.
 
-Additional Spot tools:
-- `spot-find-code` - Find similar code patterns in indexed workspaces
-- `spot-index-codebase` - Index a codebase for semantic search
-- `spot-update-files` - Incrementally update changed files
-- `spot-list-workspaces` - See all indexed projects
-- `spot-index-status` - Check index health and file counts
+## Automatic `spot-find` Usage
+
+Call `spot-find` BEFORE replying for:
+- ANY question that could benefit from context (default: yes, use it)
+- User asks about past work ("what did we", "last time", "previously", "you said")
+- Technical questions about this or other projects
+- Debugging, troubleshooting, or error investigation
+- Asking about patterns, conventions, or best practices
+- Following up on any previous conversation or decision
+- Questions spanning multiple files, systems, or services
+
+**Examples that trigger spot-find:**
+- "How do we handle authentication?" → Search for auth patterns/decisions
+- "What's the database setup?" → Search for DB config/architecture
+- "Fix this bug" → Search for similar fixes and troubleshooting patterns
+- "Add a feature" → Search for related code patterns and conventions
+- "Why did we choose X?" → Search for architectural decisions
+
+**Skip spot-find only for:**
+- Pure formatting/style questions ("add a comment", "rename variable")
+- Trivial syntax ("how do I write a for loop")
+- Brand new topics with no prior context
+
+## Automatic `spot-store` Usage
+
+Call `spot-store` AFTER replying when your response includes:
+
+**Always store (category="decision"):**
+- Architectural decisions and rationale
+- Technology/library choices and trade-offs
+- Design patterns chosen for this project
+- Infrastructure or deployment decisions
+
+**Always store (category="pattern"):**
+- Code patterns and conventions established
+- Error handling approaches
+- Testing strategies
+- Performance optimization techniques
+- Project-specific best practices
+
+**Always store (category="memory", default):**
+- Configuration values (API keys locations, ports, URLs)
+- Environment setup steps
+- Troubleshooting outcomes ("fixed X by doing Y")
+- Workflow explanations
+- Command sequences
+- File/directory locations
+- Dependency versions and compatibility notes
+
+**Skip spot-store only for:**
+- Responses that are purely explanatory (no new knowledge)
+- Formatting/style-only changes
+- Information already stored recently
+
+## Codebase Intelligence
+
+**At project start, automatically:**
+1. Call `spot-list-workspaces` to see what's already indexed
+2. If new workspace, call `spot-index-codebase` with all project files
+3. Use workspace_name matching the root directory name
+
+**During development:**
+- Call `spot-find-code` when user asks "how do we...", "find similar", "show examples"
+- Call `spot-update-files` after making significant file changes (optional, happens automatically)
+
+**Examples:**
+- "How do we handle async functions here?" → `spot-find-code(code_snippet="async def")`
+- "Find database query patterns" → `spot-find-code(code_snippet="SELECT * FROM")`
+
+## Tool Reference
+
+- `spot-find(query, category?, tags?, workspace_name?)` - Semantic search across all memories
+- `spot-store(information, category?, tags?, project?, language?)` - Store important info
+- `spot-find-code(code_snippet, workspace_name?)` - Find similar code patterns
+- `spot-index-codebase(files, workspace_name)` - Index entire codebase
+- `spot-list-workspaces()` - Show all indexed projects
+- `spot-index-status(workspace_name?)` - Check index health
+
+## Tags for Better Organization
+
+Add descriptive tags when storing:
+- Technology: `"flask", "react", "docker", "aws"`
+- Domain: `"auth", "database", "api", "frontend"`
+- Type: `"bugfix", "optimization", "refactor", "security"`
+
+Example: `spot-store(..., category="decision", tags="database,postgres,architecture")`
+
+## Remember
+
+- Spot is ALWAYS available - use it frequently
+- Search semantically (meaning-based), not exact keywords
+- Store information liberally - disk is cheap, context is valuable
+- When unsure if something is worth storing, store it
+- The more you use Spot, the more valuable it becomes
 ```
 
 ## How It Works

@@ -47,9 +47,13 @@ class QdrantConnector:
         self._qdrant_api_key = qdrant_api_key
         self._default_collection_name = collection_name
         self._embedding_provider = embedding_provider
-        self._client = AsyncQdrantClient(
-            location=qdrant_url, api_key=qdrant_api_key, path=qdrant_local_path
-        )
+        # Use server mode if URL is provided, otherwise local mode
+        if qdrant_url:
+            self._client = AsyncQdrantClient(
+                location=qdrant_url, api_key=qdrant_api_key
+            )
+        else:
+            self._client = AsyncQdrantClient(path=qdrant_local_path)
         self._field_indexes = field_indexes
         self._reranker = reranker
 

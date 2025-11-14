@@ -112,13 +112,22 @@ deploy_spot_mcp() {
     docker compose ps
     echo ""
     docker logs --tail 30 spot-mcp-server
-    echo ""
-    echo "🧹 Memory Janitor systemd service will be set up separately"
   else
     echo "❌ Container failed to start"
     docker logs spot-mcp-server
     exit 1
   fi
+
+  # Setup Memory Janitor systemd service
+  echo ""
+  echo "🧹 Setting up Memory Janitor systemd service..."
+  cd ~/marcotte-dev
+  sudo cp services/spot-mcp-server/memory-janitor.service /etc/systemd/system/
+  sudo cp services/spot-mcp-server/memory-janitor.timer /etc/systemd/system/
+  sudo systemctl daemon-reload
+  sudo systemctl enable memory-janitor.timer
+  sudo systemctl start memory-janitor.timer
+  echo "✅ Memory Janitor configured (runs every 6 hours)"
 ENDSSH
 
   # Clean up local tar
@@ -126,7 +135,9 @@ ENDSSH
 
   echo ""
   echo "🎉 Spot MCP Server deployed!"
-  echo "   Test: curl http://${ORACLE_IP}:3856/mcp"
+  echo "   MCP endpoint: http://${ORACLE_IP}:3856/mcp"
+  echo "   Qdrant UI: http://${ORACLE_IP}:6333/dashboard"
+  echo "   Memory Janitor: Runs every 6 hours via systemd"
 }
 
 # Main deployment logic

@@ -460,13 +460,13 @@ async def main():
     # Create embedding provider
     embedding_provider = create_embedding_provider(embedding_settings)
 
-    # Initialize Qdrant connection
+    # Initialize Qdrant connection (using server mode, not local path)
     qdrant = QdrantConnector(
-        qdrant_settings.location,
+        qdrant_settings.location,  # Should be http://qdrant:6333 or http://localhost:6333
         qdrant_settings.api_key,
         qdrant_settings.collection_name,
         embedding_provider,
-        qdrant_settings.local_path,
+        None,  # No local path - using server mode
         {},  # No custom indexes needed
         reranker=None,
     )

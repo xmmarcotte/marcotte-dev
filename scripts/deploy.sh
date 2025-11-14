@@ -45,6 +45,8 @@ deploy_spot_mcp() {
 
   echo "📤 Transferring to Oracle Cloud ($ORACLE_IP)..."
   scp /tmp/spot-mcp-server.tar.gz ${ORACLE_USER}@${ORACLE_IP}:/home/ubuntu/
+  scp "$REPO_ROOT/services/spot-mcp-server/docker-compose.yml" ${ORACLE_USER}@${ORACLE_IP}:/home/ubuntu/
+  scp "$REPO_ROOT/services/spot-mcp-server/migrate-to-server.py" ${ORACLE_USER}@${ORACLE_IP}:/home/ubuntu/
 
   echo "🚀 Deploying on Oracle Cloud..."
   ssh ${ORACLE_USER}@${ORACLE_IP} << 'ENDSSH'
@@ -53,52 +55,70 @@ deploy_spot_mcp() {
   gunzip -c spot-mcp-server.tar.gz | docker load
   rm spot-mcp-server.tar.gz
 
-  # Stop existing container if running
-  if docker ps -a | grep -q spot-mcp-server; then
-    echo "Stopping existing container..."
-    docker stop spot-mcp-server 2>/dev/null || true
-    docker rm spot-mcp-server 2>/dev/null || true
+  # Check if we need to migrate from local storage
+  if [ -d ~/qdrant-data ] && [ "$(ls -A ~/qdrant-data)" ]; then
+    echo "📦 Found existing local Qdrant data, will migrate..."
+    NEEDS_MIGRATION=true
+  else
+    NEEDS_MIGRATION=false
   fi
 
-  # Create data directory
-  mkdir -p ~/qdrant-data
-  chmod 755 ~/qdrant-data
+  # Stop existing services
+  echo "Stopping existing services..."
+  docker-compose down 2>/dev/null || true
 
-  # Run container
-  echo "Starting container..."
-  docker run -d \
-    --name spot-mcp-server \
-    --restart unless-stopped \
-    -p 3856:3855 \
-    -v ~/qdrant-data:/app/qdrant-data \
-    -e QDRANT_LOCAL_PATH=/app/qdrant-data \
-    -e COLLECTION_NAME=default-collection \
-    -e EMBEDDING_MODEL=BAAI/bge-large-en-v1.5 \
-    -e RERANKER_ENABLED=true \
-    -e FASTMCP_HOST=0.0.0.0 \
-    -e FASTMCP_PORT=3855 \
-    spot-mcp-server:arm64
+  # Start Qdrant server first
+  echo "Starting Qdrant server..."
+  docker-compose up -d qdrant
+
+  # Wait for Qdrant to be healthy
+  echo "Waiting for Qdrant to be ready..."
+  for i in {1..30}; do
+    if docker exec qdrant curl -f http://localhost:6333/health > /dev/null 2>&1; then
+      echo "✅ Qdrant is ready"
+      break
+    fi
+    echo "  Waiting... ($i/30)"
+    sleep 2
+  done
+
+  # Migrate data if needed
+  if [ "$NEEDS_MIGRATION" = true ]; then
+    echo "🔄 Migrating data from local storage to Qdrant server..."
+    docker run --rm \
+      --network="host" \
+      -v ~/qdrant-data:/app/qdrant-data \
+      -e QDRANT_LOCAL_PATH=/app/qdrant-data \
+      -e QDRANT_URL=http://localhost:6333 \
+      -e COLLECTION_NAME=default-collection \
+      spot-mcp-server:arm64 \
+      python /app/migrate-to-server.py
+
+    echo "✅ Migration complete"
+    echo "💾 Backing up old local storage..."
+    mv ~/qdrant-data ~/qdrant-data.backup.$(date +%Y%m%d_%H%M%S)
+  fi
+
+  # Start Spot MCP Server
+  echo "Starting Spot MCP Server..."
+  docker-compose up -d spot-mcp-server
 
   # Wait for container to start
   sleep 5
 
   # Check if running
   if docker ps | grep -q spot-mcp-server; then
-    echo "✅ Container started successfully"
-    docker logs --tail 20 spot-mcp-server
+    echo "✅ Containers started successfully"
+    docker-compose ps
+    echo ""
+    docker logs --tail 30 spot-mcp-server
+    echo ""
+    echo "🧹 Memory Janitor systemd service will be set up separately"
   else
     echo "❌ Container failed to start"
     docker logs spot-mcp-server
     exit 1
   fi
-
-  # Test Memory Janitor
-  echo ""
-  echo "🧹 Testing Memory Janitor..."
-  docker exec spot-mcp-server python -m memory_janitor
-
-  echo ""
-  echo "📊 Memory Janitor test complete! Check logs above for results."
 ENDSSH
 
   # Clean up local tar

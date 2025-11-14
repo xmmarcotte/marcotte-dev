@@ -6,8 +6,8 @@ Requires=docker.service
 [Service]
 Type=oneshot
 User=ubuntu
-WorkingDirectory=/home/ubuntu/marcotte-dev
-ExecStart=/usr/bin/docker exec spot-mcp-server python -m memory_janitor
+WorkingDirectory=/home/ubuntu
+ExecStart=/usr/bin/docker run --rm --network="host" -e QDRANT_URL=http://localhost:6333 -e COLLECTION_NAME=default-collection spot-mcp-server:arm64 python -m memory_janitor
 StandardOutput=journal
 StandardError=journal
 

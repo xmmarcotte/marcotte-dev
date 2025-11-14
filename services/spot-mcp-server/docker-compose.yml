@@ -1,28 +1,42 @@
-# Spot MCP Server - Semantic Memory for Cursor IDE
-# Part of marcotte-dev infrastructure
-# Features:
-# - BAAI/bge-large-en-v1.5 embeddings (1024 dims)
-# - Local reranking for precision
-# - Enhanced metadata extraction
-# - Incremental indexing
 version: '3.8'
 
 services:
-  spot-mcp-server:
-    build: .
-    image: spot-mcp-server:latest
-    container_name: spot-mcp-server
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: unless-stopped
     ports:
-      - "3856:3855"  # MCP HTTP endpoint
+      - "6333:6333"  # HTTP API
+      - "6334:6334"  # gRPC API (optional)
     volumes:
-      - qdrant-data:/app/qdrant-data
+      - qdrant-storage:/qdrant/storage
     environment:
-      - QDRANT_LOCAL_PATH=/app/qdrant-data
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  spot-mcp-server:
+    image: spot-mcp-server:arm64
+    container_name: spot-mcp-server
+    restart: unless-stopped
+    ports:
+      - "3856:3855"
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_API_KEY=
       - COLLECTION_NAME=default-collection
       - EMBEDDING_MODEL=BAAI/bge-large-en-v1.5
+      - RERANKER_ENABLED=true
       - FASTMCP_HOST=0.0.0.0
       - FASTMCP_PORT=3855
-    restart: unless-stopped
+    depends_on:
+      qdrant:
+        condition: service_healthy
 
 volumes:
-  qdrant-data:
+  qdrant-storage:
+    driver: local

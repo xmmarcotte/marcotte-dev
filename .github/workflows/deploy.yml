@@ -47,14 +47,10 @@ jobs:
           ssh ubuntu@${{ secrets.ORACLE_PUBLIC_IP }} 'docker ps'
 
           echo "Checking Spot MCP Server..."
-          ssh ubuntu@${{ secrets.ORACLE_PUBLIC_IP }} 'docker logs --tail 20 spot-mcp-server'
+          ssh ubuntu@${{ secrets.ORACLE_PUBLIC_IP }} 'docker logs --tail 30 spot-mcp-server'
 
           echo ""
-          echo "🧹 Testing Memory Janitor..."
-          ssh ubuntu@${{ secrets.ORACLE_PUBLIC_IP }} 'docker exec spot-mcp-server python -m memory_janitor'
-
-          echo ""
-          echo "📊 Memory Janitor test complete!"
+          echo "🧹 Memory Janitor is running as a background task (runs every 6 hours)"
 
       - name: Test MCP endpoint
         run: |

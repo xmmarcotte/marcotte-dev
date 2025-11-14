@@ -18,7 +18,7 @@ from typing import Any, Dict, List
 
 from mcp_server_qdrant.embeddings.factory import create_embedding_provider
 from mcp_server_qdrant.qdrant import Entry, QdrantConnector
-from mcp_server_qdrant.settings import QdrantSettings
+from mcp_server_qdrant.settings import EmbeddingProviderSettings, QdrantSettings
 from qdrant_client import models
 
 logging.basicConfig(
@@ -453,17 +453,22 @@ async def main():
     """Main entry point for running as a standalone service"""
     logger.info("🚀 Memory Janitor starting...")
 
-    # Initialize Qdrant connection
-    settings = QdrantSettings()
-    embedding_provider = create_embedding_provider(settings.embedding_provider)
+    # Initialize settings
+    qdrant_settings = QdrantSettings()
+    embedding_settings = EmbeddingProviderSettings()
 
+    # Create embedding provider
+    embedding_provider = create_embedding_provider(embedding_settings)
+
+    # Initialize Qdrant connection
     qdrant = QdrantConnector(
-        collection_name=settings.collection_name,
-        embedding_provider=embedding_provider,
-        qdrant_url=settings.qdrant_url,
-        qdrant_api_key=settings.qdrant_api_key,
-        qdrant_local_path=settings.local_path,
-        indexes={},  # No custom indexes needed
+        qdrant_settings.location,
+        qdrant_settings.api_key,
+        qdrant_settings.collection_name,
+        embedding_provider,
+        qdrant_settings.local_path,
+        {},  # No custom indexes needed
+        reranker=None,
     )
 
     # Create janitor

@@ -350,6 +350,15 @@ class MemoryJanitor:
 
     async def _get_all_memories(self) -> List[Entry]:
         """Retrieve all memories from Qdrant with pagination"""
+        # Check if collection exists first
+        try:
+            await self.qdrant._client.get_collection(self.qdrant.collection_name)
+        except Exception as e:
+            logger.warning(
+                f"Collection {self.qdrant.collection_name} doesn't exist yet: {e}"
+            )
+            return []
+
         all_memories = []
         offset = 0
         batch_size = 1000

@@ -96,7 +96,7 @@ deploy_spot_mcp() {
   echo ""
   echo "🧹 Testing Memory Janitor..."
   docker exec spot-mcp-server python -m memory_janitor
-  
+
   echo ""
   echo "📊 Memory Janitor test complete! Check logs above for results."
 ENDSSH

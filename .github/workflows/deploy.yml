@@ -52,7 +52,7 @@ jobs:
           echo ""
           echo "🧹 Testing Memory Janitor..."
           ssh ubuntu@${{ secrets.ORACLE_PUBLIC_IP }} 'docker exec spot-mcp-server python -m memory_janitor'
-          
+
           echo ""
           echo "📊 Memory Janitor test complete!"
 

@@ -68,6 +68,10 @@ deploy_spot_mcp() {
   # Stop existing services
   echo "Stopping existing services..."
   docker compose down 2>/dev/null || true
+  docker stop spot-mcp-server 2>/dev/null || true
+  docker rm spot-mcp-server 2>/dev/null || true
+  docker stop qdrant 2>/dev/null || true
+  docker rm qdrant 2>/dev/null || true
 
   # Start Qdrant server first
   echo "Starting Qdrant server..."

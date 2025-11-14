@@ -47,6 +47,8 @@ deploy_spot_mcp() {
   scp /tmp/spot-mcp-server.tar.gz ${ORACLE_USER}@${ORACLE_IP}:/home/ubuntu/
   scp "$REPO_ROOT/services/spot-mcp-server/docker-compose.yml" ${ORACLE_USER}@${ORACLE_IP}:/home/ubuntu/
   scp "$REPO_ROOT/services/spot-mcp-server/migrate-to-server.py" ${ORACLE_USER}@${ORACLE_IP}:/home/ubuntu/
+  scp "$REPO_ROOT/services/spot-mcp-server/memory-janitor.service" ${ORACLE_USER}@${ORACLE_IP}:/home/ubuntu/
+  scp "$REPO_ROOT/services/spot-mcp-server/memory-janitor.timer" ${ORACLE_USER}@${ORACLE_IP}:/home/ubuntu/
 
   echo "🚀 Deploying on Oracle Cloud..."
   ssh ${ORACLE_USER}@${ORACLE_IP} << 'ENDSSH'
@@ -121,9 +123,8 @@ deploy_spot_mcp() {
   # Setup Memory Janitor systemd service
   echo ""
   echo "🧹 Setting up Memory Janitor systemd service..."
-  cd ~/marcotte-dev
-  sudo cp services/spot-mcp-server/memory-janitor.service /etc/systemd/system/
-  sudo cp services/spot-mcp-server/memory-janitor.timer /etc/systemd/system/
+  sudo cp ~/memory-janitor.service /etc/systemd/system/
+  sudo cp ~/memory-janitor.timer /etc/systemd/system/
   sudo systemctl daemon-reload
   sudo systemctl enable memory-janitor.timer
   sudo systemctl start memory-janitor.timer

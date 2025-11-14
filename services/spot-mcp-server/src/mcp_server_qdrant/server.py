@@ -24,7 +24,7 @@ logging.getLogger("mcp.server.lowlevel").setLevel(logging.WARNING)
 logging.getLogger("mcp.server.streamable_http").setLevel(logging.WARNING)
 
 # Instructions to guide AI on when to use the tools
-INSTRUCTIONS = """This is a STATELESS remote MCP server providing semantic memory and codebase intelligence.
+INSTRUCTIONS = r"""This is a STATELESS remote MCP server providing semantic memory and codebase intelligence.
 
 ## 🧠 PROACTIVE MEMORY USAGE - Use Liberally!
 
@@ -60,14 +60,10 @@ INSTRUCTIONS = """This is a STATELESS remote MCP server providing semantic memor
 
 ## 📦 Workspace-Specific Tools (REQUIRE workspace_name)
 
+**PURE MEMORY-FIRST**: No indexing - just persistent knowledge and patterns.
+
 These tools filter by workspace - MUST provide workspace_name matching root directory:
-- `spot-index-codebase(files={path: content}, workspace_name="project-name")` - Initial indexing
-  - **REQUIRES `files` parameter** - IDE must send all file contents as dict
-  - MCP servers are always remote and cannot access filesystem
-- `spot-find-code(code_snippet, workspace_name="project-name")` - Semantic code search
-- `spot-index-status(workspace_name="project-name")` - Check index health
-- `spot-update-files(files={...}, workspace_name="project-name")` - Incremental updates (hash-based, fast)
-- `spot-find(query, workspace_name="project-name")` - Search with workspace filter (filters codebase results)
+- `spot-find(query, workspace_name="project-name")` - Search workspace memories (decisions, patterns, code snippets)
 
 ## 🌍 Global Tools (No workspace needed - use anytime!)
 
@@ -85,15 +81,34 @@ These tools work across ALL projects for cross-workspace learning:
 
 **Note:** Use `spot-store(..., category="decision")` for architectural decisions and `spot-store(..., category="pattern")` for coding patterns instead of separate tools.
 
-## 🔄 Typical Workflow
+## ⚠️ CRITICAL ASSISTANT REQUIREMENTS
 
-1. **User opens project** → `spot-index-codebase(files={path: content}, workspace_name="my-app")`
-   - IDE must provide `files` dict with all file contents (MCP servers are always remote)
-2. **User asks question** → `spot-find(query)` FIRST to check memory (returns mixed results)
-3. **User asks about code** → `spot-find-code(..., workspace_name="my-app")` OR `spot-find(query, workspace_name="my-app", category="codebase")`
-4. **Provide answer** → `spot-store(answer)` AFTER to remember it
-5. **User edits files** → `spot-update-files(files={...}, workspace_name="my-app")`
-6. **User makes decision** → `spot-store(..., category="decision")` to capture rationale
+**You (the AI Assistant) MUST:**
+
+1. **RELY ON CURSOR FOR CODE** - Use Cursor's built-in search/navigation for local code
+2. **FOCUS ON MEMORY SYSTEM** - Store decisions, patterns, and notes with `spot-store`
+3. **INDEX CODE SNIPPETS** - When discussing specific code, store relevant snippets in memory
+4. **SEARCH SEMANTICALLY** - Use `spot-find` for cross-project patterns and decisions
+5. **NO CODEBASE INDEXING** - Don't try to index entire files - that's Cursor's job
+
+**Failure to follow these will result in redundancy with Cursor's capabilities.**
+
+## 🔄 Memory-First Workflow
+
+1. **SEARCH MEMORY FIRST** → Assistant calls `spot-find(query)` before answering
+   - **WHEN**: Any non-trivial question or request
+   - **WHY**: Leverage stored decisions, patterns, and previous work
+   - **HOW**: Search across all memories with semantic matching
+
+2. **STORE INSIGHTS** → Assistant calls `spot-store` after providing value
+   - **WHEN**: After answering questions, making decisions, establishing patterns
+   - **WHY**: Build searchable memory for future conversations
+   - **HOW**: Store with appropriate category (decision/pattern/memory)
+
+3. **USE CURSOR FOR CODE** → Rely on Cursor's built-in navigation for local code
+   - **WHEN**: User asks about specific files, functions, or code locations
+   - **WHY**: Cursor has superior local code intelligence
+   - **HOW**: Let Cursor handle symbol search, go-to-definition, etc.
 
 ## 💡 EXAMPLES
 
@@ -106,9 +121,10 @@ These tools work across ALL projects for cross-workspace learning:
 
 ### Example 2: User asks "Where do we use the AuthService class?"
 ```
-1. `spot-find("AuthService usage", workspace_name="my-app", category="codebase")` → Semantic search finds usage locations
-2. Provide answer with file paths from search results
-3. `spot-store("AuthService is used in LoginController, ProfileController...")` → Store for future
+1. Use Cursor's search/find to locate AuthService usage
+2. `spot-find("AuthService patterns", category="pattern")` → Check for stored patterns
+3. Provide answer using Cursor results + memory patterns
+4. `spot-store("AuthService pattern: centralized auth with JWT tokens\n\nExample usage:\nconst auth = new AuthService();\nawait auth.login(credentials);\n\nKey methods:\n- login(credentials)\n- logout()\n- getCurrentUser()\n- refreshToken()", category="pattern", tags="auth,security")` → Store codeblock + usage
 ```
 
 ### Example 3: Search for patterns with filters
@@ -127,20 +143,30 @@ User: "Let's use PostgreSQL instead of MongoDB for this project"
 ### Example 5: User establishes coding pattern
 ```
 User shows: "Always use async/await for API calls with try/catch"
-1. `spot-store("Pattern: async/await with try/catch for APIs\nExample: async function fetchData() {...}", category="pattern", tags="async,error-handling", language="javascript")`
+1. `spot-store("Pattern: async/await with try/catch for APIs\n\nGood example:\nasync function fetchUserData(userId) {\n  try {\n    const response = await api.get(\`/users/${userId}\`);\n    return response.data;\n  } catch (error) {\n    logger.error('Failed to fetch user:', error);\n    throw new ApiError('User fetch failed', error);\n  }\n}\n\nBad example (avoid):\napi.get(\`/users/${userId}\`)\n  .then(data => console.log(data))\n  .catch(err => console.error(err));", category="pattern", tags="async,error-handling", language="javascript")`
 2. Future code questions will reference this pattern via spot-find
 ```
+
+## 🚨 CRITICAL WORKFLOW PRIORITY
+
+### THE WORKFLOW (Simple & Powerful):
+1. **SEARCH MEMORY FIRST**: `spot-find(query)` - Always check stored knowledge before answering
+2. **STORE VALUABLE INSIGHTS**: `spot-store(information, category="pattern")` - Save patterns, decisions, code examples
+3. **LET CURSOR HANDLE CODE**: Use Cursor for file navigation, search, and immediate code access
+
+**NO INDEXING TOOLS** - Pure memory-first approach for maximum simplicity and power.
 
 ## 🚨 CRITICAL REMINDERS
 
 1. **ALWAYS** call `spot-find` before answering (unless trivial) - it returns mixed results (code, decisions, patterns, memories)
 2. **ALWAYS** call `spot-store` after answering (unless trivial) - use `category` parameter for decisions/patterns
 3. **ALWAYS** provide `workspace_name` for workspace-specific tools
-4. **MCP servers are always remote** - `spot-index-codebase` REQUIRES `files` parameter (dict of file_path: file_content). IDE must send all file contents.
+4. **STORE CODE PATTERNS** - Use `spot-store` to capture code insights and patterns as they're discussed
 5. Server is STATELESS - each call must be self-contained
 6. Don't ask permission - just use the tools automatically
 7. Make memory usage invisible - user should feel like you "just know"
 8. Use `spot-find` filters (`category`, `workspace_name`, `language`, `tags`, `since`, `until`) to narrow results
+9. **COMPLEMENT CURSOR** - Let Cursor handle code navigation, Spot handles memory and patterns
 """
 
 mcp = QdrantMCPServer(

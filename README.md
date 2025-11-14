@@ -17,11 +17,11 @@ Semantic memory and codebase intelligence MCP server for Cursor IDE.
 
 **Features:**
 - Persistent memory across all machines
-- Semantic codebase search with workspace isolation
+- Semantic memory search across all projects
 - Architectural decision tracking
-- Code pattern recognition
-- AST-based code chunking
-- Incremental indexing with hash-based change detection
+- Code pattern recognition and storage
+- Pure memory-first workflow (no codebase indexing)
+- Cursor integration for local code intelligence
 
 See [services/spot-mcp-server/README.md](services/spot-mcp-server/README.md) for details.
 

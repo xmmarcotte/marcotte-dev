@@ -92,29 +92,27 @@ Call `spot-store` AFTER replying when your response includes:
 - Formatting/style-only changes
 - Information already stored recently
 
-## Codebase Intelligence
+## Memory System (No Codebase Indexing)
 
-**At project start, automatically:**
-1. Call `spot-list-workspaces` to see what's already indexed
-2. If new workspace, call `spot-index-codebase` with all project files
-3. Use workspace_name matching the root directory name
+**Spot focuses on memory and patterns, not local code search:**
+- **Memory storage**: Store decisions, patterns, and insights with `spot-store`
+- **Cross-project search**: Find patterns and decisions across all your work
+- **Code navigation**: Use Cursor's built-in search for local code
 
 **During development:**
-- Call `spot-find-code` when user asks "how do we...", "find similar", "show examples"
-- Call `spot-update-files` after making significant file changes (optional, happens automatically)
+- Assistant calls `spot-find` before answering to check memory
+- Assistant calls `spot-store` after providing value to build memory
+- No codebase indexing - Cursor handles local code intelligence
 
 **Examples:**
-- "How do we handle async functions here?" → `spot-find-code(code_snippet="async def")`
-- "Find database query patterns" → `spot-find-code(code_snippet="SELECT * FROM")`
+- "How do we handle async functions here?" → `spot-find("async patterns", category="pattern")`
+- "Find database query patterns" → `spot-find("database queries", category="pattern")`
 
 ## Tool Reference
 
 - `spot-find(query, category?, tags?, workspace_name?)` - Semantic search across all memories
 - `spot-store(information, category?, tags?, project?, language?)` - Store important info
-- `spot-find-code(code_snippet, workspace_name?)` - Find similar code patterns
-- `spot-index-codebase(files, workspace_name)` - Index entire codebase
-- `spot-list-workspaces()` - Show all indexed projects
-- `spot-index-status(workspace_name?)` - Check index health
+- `spot-list-workspaces()` - Show all workspaces with stored memories
 
 ## Tags for Better Organization
 
@@ -158,24 +156,22 @@ spot-find(query="database connection issue")
 # - "Connection retry logic added"
 ```
 
-### 3. Codebase Intelligence
+### 3. Memory System
 
-Spot indexes your code with AST-based chunking, preserving function/class context:
+Spot stores and retrieves memories, decisions, and patterns across all your projects:
 
 ```python
-# Index your workspace (Cursor does this automatically)
-spot-index-codebase(
-    files={...},  # All project files
-    workspace_name="my-app"
+# Store architectural decision
+spot-store(
+    information="Decision: Use PostgreSQL for complex queries\nRationale: ACID compliance needed\nAlternatives: MongoDB",
+    category="decision",
+    tags="database,architecture"
 )
 
-# Find similar code patterns
-spot-find-code(
-    code_snippet="async def fetch_data",
-    workspace_name="my-app"
-)
+# Find similar patterns later
+spot-find("database decisions", category="decision")
 
-# Returns: All functions that follow this pattern with context
+# Returns: All stored database decisions with context
 ```
 
 ### 4. Categories for Organization
@@ -238,36 +234,70 @@ Claude: [calls spot-find(query="auth system implementation today")]
 
 ## Advanced Features
 
-### Incremental Updates
+### Memory Building with Codeblocks
 
-After editing files:
+After working on code, store important patterns and examples:
 
 ```python
-# Spot automatically detects changes and only re-indexes modified files
-spot-update-files(
-    files={"src/main.py": "...", "src/api.py": "..."},
-    workspace_name="my-app"
-)
-# Output: Updated 2 changed files (12 chunks) in 1847ms
+# Store a complete code pattern with examples
+spot-store(
+    information="""AuthService usage pattern:
+
+GOOD: Centralized auth with proper error handling
+```javascript
+const auth = new AuthService();
+try {
+  const user = await auth.login(credentials);
+  // Use user...
+} catch (error) {
+  // Handle auth errors
+}
 ```
+
+BAD: Direct API calls without error handling
+```javascript
+// Don't do this
+api.post('/auth/login', credentials)
+  .then(user => /* handle success */)
+  .catch(err => /* handle error */);
+```
+
+Key methods:
+- login(credentials) → Promise<User>
+- logout() → Promise<void>
+- getCurrentUser() → User | null
+- refreshToken() → Promise<string>
+""",
+    category="pattern",
+    tags="auth,security,javascript"
+)
+
+# Later, find patterns and examples
+spot-find("auth service usage", category="pattern")
+```
+
+### Pure Memory-First Approach
+
+**ONLY use memory tools** - no indexing or code search tools:
+- `spot-find` for retrieving stored patterns, decisions, and examples
+- `spot-store` for saving valuable code patterns and insights
+
+**Cursor handles all code access** - file navigation, search, and immediate code intelligence.
 
 ### Workspace Isolation
 
 Multiple projects stay separate:
 
 ```python
-spot-find-code(
-    code_snippet="authentication",
-    workspace_name="client-project"  # Only searches this workspace
+spot-find(
+    query="authentication patterns",
+    workspace_name="client-project"  # Only searches this workspace's memories
 )
 ```
 
-### Health Monitoring
+### Memory Health
 
-```python
-spot-index-status(workspace_name="my-app")
-# Shows: files tracked, last update, index health
-```
+Since we use pure memory-first approach, health monitoring is built into the search results. If you're not finding expected memories, check your search terms or category filters.
 
 ## Troubleshooting
 

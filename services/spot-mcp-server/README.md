@@ -1,6 +1,6 @@
 # Spot MCP Server
 
-A semantic memory and codebase intelligence MCP server for Cursor IDE, powered by Qdrant vector search.
+A semantic memory MCP server for Cursor IDE, powered by Qdrant vector search.
 
 **Part of the [marcotte-dev](../../) infrastructure.**
 
@@ -8,7 +8,7 @@ A semantic memory and codebase intelligence MCP server for Cursor IDE, powered b
 
 Spot is an MCP (Model Context Protocol) server that gives Claude in Cursor IDE:
 - **Persistent memory** across all your machines
-- **Semantic codebase search** with workspace isolation
+- **Semantic memory search** across all projects
 - **Architectural decision tracking** with structured categories
 - **Code pattern recognition** for consistent development
 
@@ -22,17 +22,17 @@ All data is stored in your own Qdrant instance - no external APIs, no data leave
 - Local reranking for improved precision
 - Optimized for code and technical content
 
-### Smart Codebase Intelligence
-- AST-based code chunking (preserves context)
-- Function/class signature extraction
-- Framework and pattern detection
-- Quality signals (docstrings, type hints, tests)
+### Memory System
+- Semantic search across all stored memories
+- Category-based organization (decisions, patterns, notes)
+- Tag-based filtering for precise retrieval
+- Cross-project pattern recognition
 
-### Incremental Indexing
-- Hash-based change detection (only re-index what changed)
-- ~2 second updates for typical changes
+### Memory Building
+- Organic memory growth as you work
+- Store insights, decisions, and patterns with `spot-store`
+- No mass indexing - just capture valuable moments
 - Workspace isolation for multi-project support
-- Health monitoring and status checks
 
 ## The 7 Tools
 
@@ -84,80 +84,39 @@ spot-find(query="database", tags="architecture")
 
 Returns results grouped by category: Decisions, Patterns, Code, Memories.
 
-### 3. `spot-index-codebase` - Index your code
-Full codebase indexing with AST-based chunking.
+### 3. `spot-list-workspaces` - List workspaces
+List all workspaces with stored memories.
+
+**Memory-first approach:** Focus on storing insights, code patterns, and usage examples with `spot-store` rather than indexing entire files.
+
+**Example:** Store important codeblocks as you discover them:
 
 ```python
-# Index a workspace (IDE sends file contents)
-spot-index-codebase(
-    files={
-        "src/main.py": "# file content here...",
-        "src/utils.py": "# file content here...",
-        # ... all files
-    },
-    workspace_name="my-app"
-)
-# Output: Indexed 24 files (156 code chunks) from 24 total files. Languages: python, markdown
+spot-store(
+    information="""Database connection pattern with retry logic:
+
+```python
+async def get_db_connection(retries=3):
+    for attempt in range(retries):
+        try:
+            conn = await create_connection()
+            await conn.ping()  # Test connection
+            return conn
+        except ConnectionError as e:
+            if attempt == retries - 1:
+                raise
+            await asyncio.sleep(2 ** attempt)  # Exponential backoff
+    raise RuntimeError("Failed to connect after retries")
 ```
 
-**Note:** MCP servers are remote - the IDE must send file contents as a dictionary.
-
-### 4. `spot-find-code` - Search code semantically
-Find similar code patterns across your codebase.
-
-```python
-# Find similar functions
-spot-find-code(
-    code_snippet="async def fetch_data",
-    workspace_name="my-app"
-)
-
-# Find where a pattern is used
-spot-find-code(
-    code_snippet="class UserAuthentication",
-    workspace_name="my-app"
+Use this pattern for all database operations to handle connection failures gracefully.""",
+    category="pattern",
+    tags="database,retry,async"
 )
 ```
 
-Returns code chunks with file paths, line numbers, and context (class/function names).
-
-### 5. `spot-update-files` - Incremental updates
-Fast updates for changed files only.
-
-```python
-# Update specific files after editing
-spot-update-files(
-    files={
-        "src/main.py": "# updated content...",
-        "src/api.py": "# updated content..."
-    },
-    workspace_name="my-app"
-)
-# Output: Updated 2 changed files (12 code chunks) in 1847ms
-```
-
-Uses MD5 hash comparison - only re-indexes files that actually changed.
-
-### 6. `spot-index-status` - Check health
-Monitor your workspace index health.
-
-```python
-spot-index-status(workspace_name="my-app")
-```
-
-```
-📊 Index Status
-
-Workspace: my-app
-Files Tracked: 24
-Last Update: 2 hours ago
-Auto-Index: ✅ Enabled
-
-✅ Index is healthy and current
-```
-
-### 7. `spot-list-workspaces` - List all workspaces
-See all indexed projects.
+### 4. `spot-list-workspaces` - List all workspaces
+See all workspaces with stored memories.
 
 ```python
 spot-list-workspaces()

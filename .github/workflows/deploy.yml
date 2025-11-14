@@ -55,7 +55,12 @@ jobs:
       - name: Test MCP endpoint
         run: |
           echo "Testing MCP server endpoint..."
-          curl -f http://${{ secrets.ORACLE_PUBLIC_IP }}:3856/mcp || echo "MCP endpoint requires SSE headers (expected)"
+          response=$(curl -s --max-time 5 -H "Accept: text/event-stream" http://${{ secrets.ORACLE_PUBLIC_IP }}:3856/mcp || true)
+          if echo "$response" | grep -q "event:\|data:"; then
+            echo "✅ MCP endpoint is responding with SSE events"
+          else
+            echo "⚠️  MCP endpoint responded but no SSE events detected (may still be initializing)"
+          fi
 
       - name: Deployment summary
         run: |

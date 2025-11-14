@@ -65,11 +65,11 @@ deploy_spot_mcp() {
 
   # Stop existing services
   echo "Stopping existing services..."
-  docker-compose down 2>/dev/null || true
+  docker compose down 2>/dev/null || true
 
   # Start Qdrant server first
   echo "Starting Qdrant server..."
-  docker-compose up -d qdrant
+  docker compose up -d qdrant
 
   # Wait for Qdrant to be healthy
   echo "Waiting for Qdrant to be ready..."
@@ -101,7 +101,7 @@ deploy_spot_mcp() {
 
   # Start Spot MCP Server
   echo "Starting Spot MCP Server..."
-  docker-compose up -d spot-mcp-server
+  docker compose up -d spot-mcp-server
 
   # Wait for container to start
   sleep 5
@@ -109,7 +109,7 @@ deploy_spot_mcp() {
   # Check if running
   if docker ps | grep -q spot-mcp-server; then
     echo "✅ Containers started successfully"
-    docker-compose ps
+    docker compose ps
     echo ""
     docker logs --tail 30 spot-mcp-server
     echo ""

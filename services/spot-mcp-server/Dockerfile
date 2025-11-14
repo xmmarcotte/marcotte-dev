@@ -9,6 +9,7 @@ RUN pip install --no-cache-dir uv
 # Copy all files needed for installation
 COPY pyproject.toml uv.lock README.md ./
 COPY src/ ./src/
+COPY migrate-to-server.py ./
 
 # Install dependencies (creates .venv)
 RUN uv sync --frozen --no-dev

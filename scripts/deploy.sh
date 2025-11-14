@@ -133,9 +133,18 @@ deploy_spot_mcp() {
   # Run Memory Janitor once immediately to fix existing memories
   echo ""
   echo "🔧 Running Memory Janitor now to fix existing workspace metadata..."
-  sudo systemctl start memory-janitor.service
-  sleep 3
-  echo "✅ Memory Janitor run complete (check logs: sudo journalctl -u memory-janitor.service -n 50)"
+  echo "   Waiting for services to be fully ready..."
+  sleep 10
+  
+  if sudo systemctl start memory-janitor.service; then
+    echo "✅ Memory Janitor triggered"
+    sleep 5
+    echo "📊 Memory Janitor logs:"
+    sudo journalctl -u memory-janitor.service -n 30 --no-pager
+  else
+    echo "⚠️  Memory Janitor failed to start (will run on schedule)"
+    sudo journalctl -u memory-janitor.service -n 20 --no-pager
+  fi
 ENDSSH
 
   # Clean up local tar

@@ -49,6 +49,7 @@ class MemoryJanitor:
             "conflicts_resolved": 0,
             "stale_archived": 0,
             "health_updated": 0,
+            "workspace_fixed": 0,
         }
 
     async def run_maintenance(self) -> Dict[str, Any]:
@@ -56,6 +57,10 @@ class MemoryJanitor:
         logger.info("🧹 Starting memory maintenance cycle...")
 
         try:
+            # Phase 0: Workspace cleanup (run first, fixes metadata)
+            logger.info("Phase 0: Workspace cleanup")
+            await self.fix_workspace_metadata()
+
             # Phase 1: Deduplication
             logger.info("Phase 1: Deduplication")
             await self.deduplicate_memories()
@@ -81,6 +86,131 @@ class MemoryJanitor:
         except Exception as e:
             logger.error(f"❌ Maintenance failed: {e}")
             raise
+
+    async def fix_workspace_metadata(self):
+        """Fix workspace metadata: migrate 'project' to 'workspace_name' and normalize"""
+        logger.info("🔧 Fixing workspace metadata...")
+
+        all_memories = await self._get_all_memories()
+
+        for memory in all_memories:
+            meta = memory.metadata or {}
+            needs_update = False
+            updated_meta = dict(meta)
+
+            # Case 1: Has 'project' but not 'workspace_name' - migrate it
+            if "project" in meta and "workspace_name" not in meta:
+                workspace = self._normalize_workspace_name(meta["project"])
+                updated_meta["workspace_name"] = workspace
+                needs_update = True
+                logger.info(
+                    f"Migrating project '{meta['project']}' -> workspace_name '{workspace}'"
+                )
+
+            # Case 2: Has 'workspace_name' but not normalized - normalize it
+            elif "workspace_name" in meta:
+                original = meta["workspace_name"]
+                normalized = self._normalize_workspace_name(original)
+                if original != normalized:
+                    updated_meta["workspace_name"] = normalized
+                    needs_update = True
+                    logger.info(
+                        f"Normalizing workspace_name '{original}' -> '{normalized}'"
+                    )
+
+            # Case 3: Try to infer workspace from content/tags for important memories
+            elif "workspace_name" not in meta and meta.get("category") in [
+                "decision",
+                "pattern",
+            ]:
+                # Try to infer from tags or content
+                inferred = self._infer_workspace(memory.content, meta)
+                if inferred:
+                    updated_meta["workspace_name"] = inferred
+                    needs_update = True
+                    logger.info(f"Inferred workspace_name '{inferred}' from content")
+
+            # Update if needed
+            if needs_update:
+                await self._update_memory_metadata(memory.id, updated_meta)
+                self.stats["workspace_fixed"] += 1
+
+        logger.info(
+            f"✅ Fixed {self.stats['workspace_fixed']} workspace metadata entries"
+        )
+
+    def _normalize_workspace_name(self, name: str) -> str:
+        """Normalize workspace name to be consistent"""
+        import re
+
+        normalized = name.lower()
+        normalized = re.sub(r"[^\w\-]", "-", normalized)  # Replace non-alphanumeric
+        normalized = re.sub(r"-+", "-", normalized)  # Collapse multiple hyphens
+        normalized = normalized.strip("-")  # Remove leading/trailing hyphens
+        return normalized
+
+    def _infer_workspace(self, content: str, metadata: dict) -> str | None:
+        """Try to infer workspace from content and metadata"""
+        # Common project names to look for
+        known_projects = [
+            "eboot-app-code",
+            "eboot-webapp-backend",
+            "eboot-webapp-frontend",
+            "eboot-mortician",
+            "meta-granitenet",
+            "marcotte-dev",
+            "spot-mcp-server",
+        ]
+
+        content_lower = content.lower()
+
+        # Check tags first
+        tags = metadata.get("tags", "")
+        if isinstance(tags, str):
+            for project in known_projects:
+                if project in tags.lower():
+                    return project
+
+        # Check content
+        for project in known_projects:
+            if project in content_lower:
+                return project
+
+        return None
+
+    async def _update_memory_metadata(self, memory_id: str, metadata: dict):
+        """Update memory metadata in Qdrant"""
+        try:
+            # Get the memory point to preserve its vector
+            points = await self.qdrant.client.retrieve(
+                collection_name=self.qdrant.collection_name,
+                ids=[memory_id],
+                with_vectors=True,
+                with_payload=True,
+            )
+
+            if not points:
+                logger.warning(f"Memory {memory_id} not found for metadata update")
+                return
+
+            point = points[0]
+
+            # Update with new metadata
+            await self.qdrant.client.upsert(
+                collection_name=self.qdrant.collection_name,
+                points=[
+                    models.PointStruct(
+                        id=memory_id,
+                        vector=point.vector,
+                        payload={
+                            "content": point.payload["content"],
+                            "metadata": metadata,
+                        },
+                    )
+                ],
+            )
+        except Exception as e:
+            logger.error(f"Failed to update metadata for {memory_id}: {e}")
 
     async def deduplicate_memories(self):
         """Find and merge near-duplicate memories using semantic similarity"""
@@ -441,6 +571,7 @@ class MemoryJanitor:
         """Generate maintenance report"""
         return {
             "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "workspace_fixed": self.stats["workspace_fixed"],
             "duplicates_merged": self.stats["duplicates_merged"],
             "conflicts_resolved": self.stats["conflicts_resolved"],
             "stale_archived": self.stats["stale_archived"],

@@ -196,8 +196,11 @@ class QdrantMCPServer(FastMCP):
                     description="Programming language (for patterns, e.g., 'python', 'javascript')"
                 ),
             ] = None,
-            project: Annotated[
-                str | None, Field(description="Project name (for decisions/patterns)")
+            workspace_name: Annotated[
+                str | None,
+                Field(
+                    description="Workspace/project name (e.g., 'eboot-app-code', 'marcotte-dev'). Used to organize memories by project."
+                ),
             ] = None,
             collection_name: Annotated[
                 str | None,
@@ -208,7 +211,7 @@ class QdrantMCPServer(FastMCP):
             metadata: Annotated[
                 dict | str | None,
                 Field(
-                    description="Additional metadata (object or stringified JSON). Category, tags, language, and project will be merged into this."
+                    description="Additional metadata (object or stringified JSON). Category, tags, language, and workspace_name will be merged into this."
                 ),
             ] = None,
         ) -> str:
@@ -248,8 +251,10 @@ class QdrantMCPServer(FastMCP):
             if language:
                 store_metadata["language"] = language
 
-            if project:
-                store_metadata["project"] = project
+            if workspace_name:
+                store_metadata["workspace_name"] = self._normalize_workspace_name(
+                    workspace_name
+                )
 
             # For decisions, extract decision text if it's structured
             if cat == "decision" and "decision:" in information.lower():
@@ -544,7 +549,7 @@ class QdrantMCPServer(FastMCP):
             self.tool(
                 store_foo,
                 name="spot-store",
-                description="Unified store for any content type. Use liberally after answering. Set category='decision' for architectural decisions, 'pattern' for coding patterns, 'memory' for general notes. Supports tags, language, project metadata.",
+                description="Unified store for any content type. Use liberally after answering. Set category='decision' for architectural decisions, 'pattern' for coding patterns, 'memory' for general notes. Always include workspace_name to organize by project. Supports tags, language, workspace_name metadata.",
             )
 
         # Memory and decision tools

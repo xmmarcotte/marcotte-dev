@@ -77,10 +77,11 @@ These tools work across ALL projects for cross-workspace learning:
   - Use `category="decision"` or `category="pattern"` to filter
   - Use `workspace_name` to filter codebase results
   - Use `since`/`until` for temporal queries
-- `spot-store(information, category, tags, language, project)` - **Unified store** (USE LIBERALLY!)
+- `spot-store(information, category, tags, language, workspace_name)` - **Unified store** (USE LIBERALLY!)
   - Set `category="decision"` for architectural decisions
   - Set `category="pattern"` for coding patterns
   - Default `category="memory"` for general notes
+  - Always include `workspace_name` to organize by project
 - `spot-list-workspaces()` - See all indexed projects
 
 **Note:** Use `spot-store(..., category="decision")` for architectural decisions and `spot-store(..., category="pattern")` for coding patterns instead of separate tools.

@@ -80,7 +80,7 @@ deploy_spot_mcp() {
   # Wait for Qdrant to be healthy
   echo "Waiting for Qdrant to be ready..."
   for i in {1..30}; do
-    if docker exec qdrant curl -f http://localhost:6333/health > /dev/null 2>&1; then
+    if curl -f http://localhost:6333/healthz > /dev/null 2>&1; then
       echo "✅ Qdrant is ready"
       break
     fi

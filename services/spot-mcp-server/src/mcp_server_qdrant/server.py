@@ -34,6 +34,7 @@ INSTRUCTIONS = r"""This is a STATELESS remote MCP server providing semantic memo
 - Question spans multiple systems, files, or workflows → `spot-find(query)`
 - User follows up on a fix, ticket, or script → `spot-find(query)`
 - Additional memory could improve clarity or accuracy → `spot-find(query)`
+- Include relevant historical context even when not directly asked → `spot-find(query, since="3 months ago")`
 
 **`spot-find` returns mixed results** - code, decisions, patterns, and memories grouped by category. Use filters like `category="decision"` or `workspace_name="project"` to narrow results.
 
@@ -48,6 +49,8 @@ INSTRUCTIONS = r"""This is a STATELESS remote MCP server providing semantic memo
 - `spot-store(..., category="decision")` - Architectural decisions
 - `spot-store(..., category="pattern")` - Coding patterns
 - `spot-store(..., category="memory")` - General notes (default)
+- `spot-store(..., category="error")` - Bugs, issues, and their fixes
+- `spot-store(..., category="lesson")` - Lessons learned from mistakes or successes
 
 **Memory is your external brain. Use it constantly.**
 

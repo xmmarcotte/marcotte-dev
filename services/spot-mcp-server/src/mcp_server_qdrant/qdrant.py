@@ -53,6 +53,11 @@ class QdrantConnector:
         self._field_indexes = field_indexes
         self._reranker = reranker
 
+    @property
+    def collection_name(self) -> str | None:
+        """Get the default collection name"""
+        return self._default_collection_name
+
     async def get_collection_names(self) -> list[str]:
         """
         Get the names of all collections in the Qdrant server.

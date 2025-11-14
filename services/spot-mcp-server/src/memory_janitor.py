@@ -182,7 +182,7 @@ class MemoryJanitor:
         """Update memory metadata in Qdrant"""
         try:
             # Get the memory point to preserve its vector
-            points = await self.qdrant.client.retrieve(
+            points = await self.qdrant._client.retrieve(
                 collection_name=self.qdrant.collection_name,
                 ids=[memory_id],
                 with_vectors=True,
@@ -196,7 +196,7 @@ class MemoryJanitor:
             point = points[0]
 
             # Update with new metadata
-            await self.qdrant.client.upsert(
+            await self.qdrant._client.upsert(
                 collection_name=self.qdrant.collection_name,
                 points=[
                     models.PointStruct(
@@ -330,7 +330,7 @@ class MemoryJanitor:
 
                 # Update in Qdrant
                 if hasattr(memory, "vector"):
-                    await self.qdrant.client.upsert(
+                    await self.qdrant._client.upsert(
                         collection_name=self.qdrant.collection_name,
                         points=[
                             models.PointStruct(
@@ -356,7 +356,7 @@ class MemoryJanitor:
 
         while True:
             # Use scroll API for efficient pagination
-            batch = await self.qdrant.client.scroll(
+            batch = await self.qdrant._client.scroll(
                 collection_name=self.qdrant.collection_name,
                 limit=batch_size,
                 offset=offset,
@@ -492,11 +492,11 @@ class MemoryJanitor:
 
         # Ensure archive collection exists
         try:
-            await self.qdrant.client.get_collection(archive_collection)
+            await self.qdrant._client.get_collection(archive_collection)
         except Exception:
             # Create archive collection with same config as main
             logger.info(f"Creating archive collection: {archive_collection}")
-            await self.qdrant.client.create_collection(
+            await self.qdrant._client.create_collection(
                 collection_name=archive_collection,
                 vectors_config=models.VectorParams(
                     size=1024,  # bge-large-en-v1.5 dimension
@@ -514,7 +514,7 @@ class MemoryJanitor:
 
         # Insert into archive collection
         if hasattr(memory, "id") and hasattr(memory, "vector"):
-            await self.qdrant.client.upsert(
+            await self.qdrant._client.upsert(
                 collection_name=archive_collection,
                 points=[
                     models.PointStruct(
@@ -529,7 +529,7 @@ class MemoryJanitor:
             )
 
             # Remove from main collection
-            await self.qdrant.client.delete(
+            await self.qdrant._client.delete(
                 collection_name=self.qdrant.collection_name,
                 points_selector=models.PointIdsList(points=[memory.id]),
             )

@@ -135,7 +135,7 @@ deploy_spot_mcp() {
   echo "🔧 Running Memory Janitor now to fix existing workspace metadata..."
   echo "   Waiting for services to be fully ready..."
   sleep 10
-  
+
   if sudo systemctl start memory-janitor.service; then
     echo "✅ Memory Janitor triggered"
     sleep 5

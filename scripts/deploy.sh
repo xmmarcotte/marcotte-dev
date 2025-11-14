@@ -91,6 +91,14 @@ deploy_spot_mcp() {
     docker logs spot-mcp-server
     exit 1
   fi
+
+  # Test Memory Janitor
+  echo ""
+  echo "🧹 Testing Memory Janitor..."
+  docker exec spot-mcp-server python -m memory_janitor
+  
+  echo ""
+  echo "📊 Memory Janitor test complete! Check logs above for results."
 ENDSSH
 
   # Clean up local tar

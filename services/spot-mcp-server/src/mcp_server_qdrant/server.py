@@ -46,11 +46,12 @@ INSTRUCTIONS = r"""This is a STATELESS remote MCP server providing semantic memo
 - Response would help answer future "when did we..." or "how did we..." → `spot-store(information)`
 
 **Use `spot-store` with category parameter:**
-- `spot-store(..., category="decision")` - Architectural decisions
-- `spot-store(..., category="pattern")` - Coding patterns
-- `spot-store(..., category="memory")` - General notes (default)
+- `spot-store(..., category="decision")` - Choices made: "We chose X over Y because Z"
+- `spot-store(..., category="architecture")` - System/component structure and descriptions
+- `spot-store(..., category="pattern")` - Established practices: "We always do X when Y"
 - `spot-store(..., category="error")` - Bugs, issues, and their fixes
-- `spot-store(..., category="lesson")` - Lessons learned from mistakes or successes
+- `spot-store(..., category="lesson")` - Learnings from mistakes or successes
+- `spot-store(..., category="memory")` - General notes (default catch-all)
 
 **Memory is your external brain. Use it constantly.**
 

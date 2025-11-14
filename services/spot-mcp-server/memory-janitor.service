@@ -1,0 +1,15 @@
+[Unit]
+Description=Spot Memory Janitor - Autonomous memory maintenance
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/marcotte-dev
+ExecStart=/usr/bin/docker exec spot-mcp-server python -m memory_janitor
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

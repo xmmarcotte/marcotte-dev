@@ -389,7 +389,7 @@ class MemoryJanitor:
                     f"Deleting stale memory: {memory.content[:50]}... "
                     f"(last accessed: {datetime.datetime.fromtimestamp(last_accessed)})"
                 )
-                await self._delete_memory(memory, reason="stale")
+                await self._delete_memory(memory.id, reason="stale")
                 self.stats["stale_archived"] += 1
 
     async def update_health_scores(self):
@@ -526,7 +526,7 @@ class MemoryJanitor:
             ).timestamp()
 
         # Delete the older one
-        await self._delete_memory(to_remove, reason="duplicate")
+        await self._delete_memory(to_remove.id, reason="duplicate")
 
     async def _group_by_topic(self, memories: List[Entry]) -> Dict[str, List[Entry]]:
         """Group memories by semantic topic using simple clustering"""

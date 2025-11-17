@@ -178,6 +178,14 @@ class MemoryJanitor:
 
         return None
 
+    def _extract_vector(self, vector_data):
+        """Extract vector array from Qdrant vector data (handles named vectors)"""
+        if isinstance(vector_data, dict):
+            # Qdrant returns named vectors as {"vector_name": [values]}
+            # Get the first (and likely only) vector
+            return list(vector_data.values())[0] if vector_data else None
+        return vector_data
+
     async def _update_memory_metadata(self, memory_id: str, metadata: dict):
         """Update memory metadata in Qdrant"""
         try:
@@ -195,13 +203,16 @@ class MemoryJanitor:
 
             point = points[0]
 
+            # Extract vector (handle named vectors)
+            vector = self._extract_vector(point.vector)
+
             # Update with new metadata
             await self.qdrant._client.upsert(
                 collection_name=self.qdrant.collection_name,
                 points=[
                     models.PointStruct(
                         id=memory_id,
-                        vector=point.vector,
+                        vector=vector,
                         payload={
                             "content": point.payload["content"],
                             "metadata": metadata,
@@ -267,7 +278,7 @@ class MemoryJanitor:
                 # Sort by timestamp (newest first)
                 sorted_memories = sorted(
                     conflict_group,
-                    key=lambda m: m.metadata.get("timestamp", 0),
+                    key=lambda m: (m.metadata or {}).get("timestamp", 0),
                     reverse=True,
                 )
 
@@ -383,7 +394,8 @@ class MemoryJanitor:
                     metadata=point.payload.get("metadata", {}),
                 )
                 entry.id = point.id
-                entry.vector = point.vector
+                # Extract vector (handle named vectors)
+                entry.vector = self._extract_vector(point.vector)
                 all_memories.append(entry)
 
             offset += len(batch[0])

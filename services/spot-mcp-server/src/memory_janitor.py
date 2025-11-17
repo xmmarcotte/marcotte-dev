@@ -380,6 +380,12 @@ class MemoryJanitor:
             last_accessed = meta.get("last_accessed", meta.get("timestamp", 0))
             access_count = meta.get("access_count", 0)
 
+            # Convert timestamp to float if it's a string
+            try:
+                last_accessed = float(last_accessed) if last_accessed else 0
+            except (ValueError, TypeError):
+                last_accessed = 0
+
             # Delete if old and rarely accessed
             if (
                 last_accessed < cutoff_timestamp

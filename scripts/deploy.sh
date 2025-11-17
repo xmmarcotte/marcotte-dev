@@ -129,8 +129,7 @@ deploy_spot_mcp() {
   if [ ! -f "\$MIGRATION_FLAG" ]; then
     echo ""
     echo "🔄 Running one-time payload key migration (content -> document)..."
-    docker exec spot-mcp-server python /app/migrate-content-to-document.py
-    if [ \$? -eq 0 ]; then
+    if docker exec spot-mcp-server python /app/migrate-content-to-document.py; then
       echo "✅ Payload migration complete"
       touch "\$MIGRATION_FLAG"
     else

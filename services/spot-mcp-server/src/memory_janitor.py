@@ -35,7 +35,7 @@ class MemoryJanitor:
         self,
         qdrant_connector: QdrantConnector,
         similarity_threshold: float = 0.90,
-        stale_threshold_days: int = 180,
+        stale_threshold_days: int = 365,
         min_access_count: int = 1,
     ):
         self.qdrant = qdrant_connector
@@ -186,6 +186,15 @@ class MemoryJanitor:
             return list(vector_data.values())[0] if vector_data else None
         return vector_data
 
+    def _wrap_vector(self, vector_array):
+        """Wrap vector array in named vector dict for Qdrant upsert"""
+        if vector_array is None:
+            return None
+        # Use the FastEmbed vector name format: fast-{model_name}
+        # For BAAI/bge-large-en-v1.5, this is "fast-bge-large-en-v1.5"
+        vector_name = "fast-bge-large-en-v1.5"
+        return {vector_name: vector_array}
+
     async def _update_memory_metadata(self, memory_id: str, metadata: dict):
         """Update memory metadata in Qdrant"""
         try:
@@ -212,7 +221,7 @@ class MemoryJanitor:
                 points=[
                     models.PointStruct(
                         id=memory_id,
-                        vector=vector,
+                        vector=self._wrap_vector(vector),
                         payload={
                             "content": point.payload["content"],
                             "metadata": metadata,
@@ -290,12 +299,12 @@ class MemoryJanitor:
                 )
 
                 for old_memory in to_archive:
-                    await self._archive_memory(old_memory, reason="superseded_by_newer")
+                    await self._delete_memory(old_memory, reason="superseded_by_newer")
                     self.stats["conflicts_resolved"] += 1
 
     async def archive_stale_memories(self):
-        """Archive memories that haven't been accessed in a long time"""
-        logger.info("📦 Archiving stale memories...")
+        """Delete memories that haven't been accessed in a long time (1 year)"""
+        logger.info("🗑️  Deleting stale memories...")
 
         cutoff_date = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
             days=self.stale_threshold_days
@@ -310,16 +319,16 @@ class MemoryJanitor:
             last_accessed = meta.get("last_accessed", meta.get("timestamp", 0))
             access_count = meta.get("access_count", 0)
 
-            # Archive if old and rarely accessed
+            # Delete if old and rarely accessed
             if (
                 last_accessed < cutoff_timestamp
                 and access_count < self.min_access_count
             ):
                 logger.info(
-                    f"Archiving stale memory: {memory.content[:50]}... "
+                    f"Deleting stale memory: {memory.content[:50]}... "
                     f"(last accessed: {datetime.datetime.fromtimestamp(last_accessed)})"
                 )
-                await self._archive_memory(memory, reason="stale")
+                await self._delete_memory(memory, reason="stale")
                 self.stats["stale_archived"] += 1
 
     async def update_health_scores(self):
@@ -346,7 +355,7 @@ class MemoryJanitor:
                         points=[
                             models.PointStruct(
                                 id=memory.id,
-                                vector=memory.vector,
+                                vector=self._wrap_vector(memory.vector),
                                 payload={
                                     "content": memory.content,
                                     "metadata": memory.metadata,
@@ -455,8 +464,8 @@ class MemoryJanitor:
                 datetime.timezone.utc
             ).timestamp()
 
-        # Archive the older one
-        await self._archive_memory(to_remove, reason="duplicate")
+        # Delete the older one
+        await self._delete_memory(to_remove, reason="duplicate")
 
     async def _group_by_topic(self, memories: List[Entry]) -> Dict[str, List[Entry]]:
         """Group memories by semantic topic using simple clustering"""
@@ -505,57 +514,17 @@ class MemoryJanitor:
 
         return conflicts
 
-    async def _archive_memory(self, memory: Entry, reason: str):
-        """Move memory to archive collection"""
-        logger.info(f"Archiving memory (reason: {reason}): {memory.content[:50]}...")
+    async def _delete_memory(self, memory: Entry, reason: str):
+        """Delete memory from collection"""
+        logger.info(f"Deleting memory (reason: {reason}): {memory.content[:50]}...")
 
-        archive_collection = f"{self.qdrant.collection_name}_archive"
-
-        # Ensure archive collection exists
-        try:
-            await self.qdrant._client.get_collection(archive_collection)
-        except Exception:
-            # Create archive collection with same config as main
-            logger.info(f"Creating archive collection: {archive_collection}")
-            await self.qdrant._client.create_collection(
-                collection_name=archive_collection,
-                vectors_config=models.VectorParams(
-                    size=1024,  # bge-large-en-v1.5 dimension
-                    distance=models.Distance.COSINE,
-                ),
-            )
-
-        # Add archive metadata
-        archive_metadata = memory.metadata.copy() if memory.metadata else {}
-        archive_metadata["archived_at"] = datetime.datetime.now(
-            datetime.timezone.utc
-        ).timestamp()
-        archive_metadata["archive_reason"] = reason
-        archive_metadata["original_collection"] = self.qdrant.collection_name
-
-        # Insert into archive collection
-        if hasattr(memory, "id") and hasattr(memory, "vector"):
-            await self.qdrant._client.upsert(
-                collection_name=archive_collection,
-                points=[
-                    models.PointStruct(
-                        id=memory.id,
-                        vector=memory.vector,
-                        payload={
-                            "content": memory.content,
-                            "metadata": archive_metadata,
-                        },
-                    )
-                ],
-            )
-
-            # Remove from main collection
+        # Delete from main collection
+        if hasattr(memory, "id"):
             await self.qdrant._client.delete(
                 collection_name=self.qdrant.collection_name,
                 points_selector=models.PointIdsList(points=[memory.id]),
             )
-
-            logger.info(f"Archived memory {memory.id} to {archive_collection}")
+            logger.info(f"Deleted memory {memory.id}")
 
     async def _calculate_health_score(self, memory: Entry) -> float:
         """Calculate health score (0-100) based on various factors"""

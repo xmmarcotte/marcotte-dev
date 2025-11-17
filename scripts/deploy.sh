@@ -124,21 +124,6 @@ deploy_spot_mcp() {
     exit 1
   fi
 
-  # Run one-time migration to fix payload keys (content -> document)
-  MIGRATION_FLAG=~/payload-migration-done
-  if [ ! -f "\$MIGRATION_FLAG" ]; then
-    echo ""
-    echo "🔄 Running one-time payload key migration (content -> document)..."
-    if docker exec spot-mcp-server python /app/migrate-content-to-document.py; then
-      echo "✅ Payload migration complete"
-      touch "\$MIGRATION_FLAG"
-    else
-      echo "⚠️  Payload migration failed (will retry on next deploy)"
-    fi
-  else
-    echo "✅ Payload migration already completed (skipping)"
-  fi
-
   # Setup Memory Janitor systemd service
   echo ""
   echo "🧹 Setting up Memory Janitor systemd service..."

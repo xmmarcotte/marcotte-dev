@@ -566,6 +566,14 @@ class MemoryJanitor:
                     ts1 = mem1.metadata.get("timestamp", 0) if mem1.metadata else 0
                     ts2 = mem2.metadata.get("timestamp", 0) if mem2.metadata else 0
 
+                    # Convert timestamps to float if they're strings
+                    try:
+                        ts1 = float(ts1) if ts1 else 0
+                        ts2 = float(ts2) if ts2 else 0
+                    except (ValueError, TypeError):
+                        ts1 = 0
+                        ts2 = 0
+
                     # If timestamps differ by more than 1 day, might be an update
                     if abs(ts1 - ts2) > 86400:  # 1 day in seconds
                         conflict_group.append(mem2)

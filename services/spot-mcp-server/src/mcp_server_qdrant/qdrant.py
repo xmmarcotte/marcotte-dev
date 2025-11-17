@@ -20,6 +20,8 @@ class Entry(BaseModel):
 
     content: str
     metadata: Metadata | None = None
+    id: str | None = None  # Qdrant point ID (for janitor use)
+    vector: list[float] | None = None  # Embedding vector (for janitor use)
 
 
 class QdrantConnector:

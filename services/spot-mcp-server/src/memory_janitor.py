@@ -223,7 +223,7 @@ class MemoryJanitor:
                         id=memory_id,
                         vector=self._wrap_vector(vector),
                         payload={
-                            "content": point.payload["content"],
+                            "document": point.payload.get("document", ""),
                             "metadata": metadata,
                         },
                     )
@@ -357,7 +357,7 @@ class MemoryJanitor:
                                 id=memory.id,
                                 vector=self._wrap_vector(memory.vector),
                                 payload={
-                                    "content": memory.content,
+                                    "document": memory.content,
                                     "metadata": memory.metadata,
                                 },
                             )
@@ -399,7 +399,7 @@ class MemoryJanitor:
             # Convert to Entry objects
             for point in batch[0]:
                 entry = Entry(
-                    content=point.payload.get("content", ""),
+                    content=point.payload.get("document", ""),
                     metadata=point.payload.get("metadata", {}),
                 )
                 entry.id = point.id

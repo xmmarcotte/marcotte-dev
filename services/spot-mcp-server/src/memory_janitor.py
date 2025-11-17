@@ -61,6 +61,10 @@ class MemoryJanitor:
             logger.info("Phase 0: Workspace cleanup")
             await self.fix_workspace_metadata()
 
+            # Phase 0.5: Category cleanup and invalid memory deletion
+            logger.info("Phase 0.5: Category cleanup")
+            await self.fix_category_metadata()
+
             # Phase 1: Deduplication
             logger.info("Phase 1: Deduplication")
             await self.deduplicate_memories()
@@ -137,6 +141,61 @@ class MemoryJanitor:
 
         logger.info(
             f"✅ Fixed {self.stats['workspace_fixed']} workspace metadata entries"
+        )
+
+    async def fix_category_metadata(self):
+        """Fix category metadata and clean up invalid memories"""
+        logger.info("🔧 Fixing category metadata and cleaning invalid memories...")
+
+        all_memories = await self._get_all_memories()
+
+        for memory in all_memories:
+            meta = memory.metadata or {}
+            category = meta.get("category", "memory")
+
+            # Check 1: Delete memories with empty or whitespace-only content
+            if not memory.content or memory.content.strip() == "":
+                logger.info(f"Deleting empty memory (id: {memory.id[:8]}...)")
+                await self._delete_memory(memory.id, "empty content")
+                self.stats["empty_deleted"] = self.stats.get("empty_deleted", 0) + 1
+                continue
+
+            # Check 2: Delete memories with suspiciously short content (< 10 chars)
+            if len(memory.content.strip()) < 10:
+                logger.info(
+                    f"Deleting suspiciously short memory (id: {memory.id[:8]}..., "
+                    f"content: '{memory.content[:50]}')"
+                )
+                await self._delete_memory(memory.id, "suspiciously short content")
+                self.stats["short_deleted"] = self.stats.get("short_deleted", 0) + 1
+                continue
+
+            # Check 3: Validate category values
+            valid_categories = [
+                "decision",
+                "pattern",
+                "memory",
+                "architecture",
+                "error",
+                "lesson",
+                "codebase",
+                "other",
+            ]
+            if category not in valid_categories:
+                logger.info(
+                    f"Recategorizing invalid category '{category}' -> 'memory' "
+                    f"(id: {memory.id[:8]}...)"
+                )
+                updated_meta = dict(meta)
+                updated_meta["category"] = "memory"
+                await self._update_memory_metadata(memory.id, updated_meta)
+                self.stats["category_fixed"] = self.stats.get("category_fixed", 0) + 1
+
+        logger.info(
+            f"✅ Category cleanup complete: "
+            f"{self.stats.get('category_fixed', 0)} fixed, "
+            f"{self.stats.get('empty_deleted', 0)} empty deleted, "
+            f"{self.stats.get('short_deleted', 0)} short deleted"
         )
 
     def _normalize_workspace_name(self, name: str) -> str:
@@ -299,7 +358,9 @@ class MemoryJanitor:
                 )
 
                 for old_memory in to_archive:
-                    await self._delete_memory(old_memory, reason="superseded_by_newer")
+                    await self._delete_memory(
+                        old_memory.id, reason="superseded_by_newer"
+                    )
                     self.stats["conflicts_resolved"] += 1
 
     async def archive_stale_memories(self):
@@ -514,17 +575,15 @@ class MemoryJanitor:
 
         return conflicts
 
-    async def _delete_memory(self, memory: Entry, reason: str):
-        """Delete memory from collection"""
-        logger.info(f"Deleting memory (reason: {reason}): {memory.content[:50]}...")
+    async def _delete_memory(self, memory_id: str, reason: str = ""):
+        """Delete memory from collection by ID"""
+        logger.info(f"Deleting memory {memory_id[:8]}... (reason: {reason})")
 
-        # Delete from main collection
-        if hasattr(memory, "id"):
-            await self.qdrant._client.delete(
-                collection_name=self.qdrant.collection_name,
-                points_selector=models.PointIdsList(points=[memory.id]),
-            )
-            logger.info(f"Deleted memory {memory.id}")
+        await self.qdrant._client.delete(
+            collection_name=self.qdrant.collection_name,
+            points_selector=models.PointIdsList(points=[memory_id]),
+        )
+        logger.info(f"Deleted memory {memory_id[:8]}...")
 
     async def _calculate_health_score(self, memory: Entry) -> float:
         """Calculate health score (0-100) based on various factors"""
@@ -562,6 +621,9 @@ class MemoryJanitor:
         return {
             "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "workspace_fixed": self.stats["workspace_fixed"],
+            "category_fixed": self.stats.get("category_fixed", 0),
+            "empty_deleted": self.stats.get("empty_deleted", 0),
+            "short_deleted": self.stats.get("short_deleted", 0),
             "duplicates_merged": self.stats["duplicates_merged"],
             "conflicts_resolved": self.stats["conflicts_resolved"],
             "stale_archived": self.stats["stale_archived"],

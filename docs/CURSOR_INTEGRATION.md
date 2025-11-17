@@ -111,7 +111,7 @@ Call `spot-store` AFTER replying when your response includes:
 ## Tool Reference
 
 - `spot-find(query, category?, tags?, workspace_name?)` - Semantic search across all memories
-- `spot-store(information, category?, tags?, project?, language?)` - Store important info
+- `spot-store(information, category?, tags?, workspace_name?, language?)` - Store important info
 - `spot-list-workspaces()` - Show all workspaces with stored memories
 
 ## Tags for Better Organization
@@ -183,7 +183,7 @@ Store information with categories for structured retrieval:
 spot-store(
     information="Decision: Use PostgreSQL over MongoDB for ACID compliance",
     category="decision",
-    project="my-app",
+    workspace_name="my-app",
     tags="database,architecture"
 )
 

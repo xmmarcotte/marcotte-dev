@@ -256,22 +256,8 @@ class QdrantMCPServer(FastMCP):
                     workspace_name
                 )
 
-            # For decisions, extract decision text if it's structured
-            if cat == "decision" and "decision:" in information.lower():
-                # Try to extract decision from structured text
-                lines = information.split("\n")
-                for line in lines:
-                    if line.lower().startswith("decision:"):
-                        store_metadata["decision"] = line[10:].strip()
-                        break
-
-            # For patterns, extract pattern text if it's structured
-            if cat == "pattern" and "pattern:" in information.lower():
-                lines = information.split("\n")
-                for line in lines:
-                    if line.lower().startswith("pattern:"):
-                        store_metadata["pattern"] = line[9:].strip()
-                        break
+            # No special extraction needed - content speaks for itself
+            # The category field is sufficient for filtering/display
 
             await ctx.debug(
                 f"Storing {cat}: {information[:100]}... (tags: {tags}, language: {language})"
@@ -489,17 +475,15 @@ class QdrantMCPServer(FastMCP):
             if by_category["decision"]:
                 content.append(f"\n📋 Decisions ({len(by_category['decision'])}):")
                 for entry in by_category["decision"][:5]:
-                    meta = entry.metadata or {}
-                    decision = meta.get("decision", entry.content[:100])
-                    content.append(f"  • {decision}")
+                    preview = entry.content[:150] if entry.content else "[empty]"
+                    content.append(f"  • {preview}...")
 
             # Then patterns
             if by_category["pattern"]:
                 content.append(f"\n🎨 Patterns ({len(by_category['pattern'])}):")
                 for entry in by_category["pattern"][:5]:
-                    meta = entry.metadata or {}
-                    pattern = meta.get("pattern", entry.content[:100])
-                    content.append(f"  • {pattern}")
+                    preview = entry.content[:150] if entry.content else "[empty]"
+                    content.append(f"  • {preview}...")
 
             # Then codebase
             if by_category["codebase"]:

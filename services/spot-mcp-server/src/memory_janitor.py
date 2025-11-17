@@ -404,36 +404,55 @@ class MemoryJanitor:
 
         all_memories = await self._get_all_memories()
 
+        # Batch updates for better performance
+        batch_size = 100
+        points_to_update = []
+
         for memory in all_memories:
             # Calculate health score (0-100)
             health = await self._calculate_health_score(memory)
 
             # Update metadata with health score
-            if hasattr(memory, "id") and memory.metadata:
+            if hasattr(memory, "id") and memory.metadata and hasattr(memory, "vector"):
                 memory.metadata["health_score"] = health
                 memory.metadata["health_updated_at"] = datetime.datetime.now(
                     datetime.timezone.utc
                 ).timestamp()
 
-                # Update in Qdrant
-                if hasattr(memory, "vector"):
-                    await self.qdrant._client.upsert(
-                        collection_name=self.qdrant.collection_name,
-                        points=[
-                            models.PointStruct(
-                                id=memory.id,
-                                vector=self._wrap_vector(memory.vector),
-                                payload={
-                                    "document": memory.content,
-                                    "metadata": memory.metadata,
-                                },
-                            )
-                        ],
+                points_to_update.append(
+                    models.PointStruct(
+                        id=memory.id,
+                        vector=self._wrap_vector(memory.vector),
+                        payload={
+                            "document": memory.content,
+                            "metadata": memory.metadata,
+                        },
                     )
+                )
 
                 self.stats["health_updated"] += 1
 
-        logger.info(f"Updated health scores for {len(all_memories)} memories")
+                # Upsert in batches
+                if len(points_to_update) >= batch_size:
+                    await self.qdrant._client.upsert(
+                        collection_name=self.qdrant.collection_name,
+                        points=points_to_update,
+                    )
+                    logger.info(
+                        f"  Updated {self.stats['health_updated']} health scores..."
+                    )
+                    points_to_update = []
+
+        # Upsert remaining points
+        if points_to_update:
+            await self.qdrant._client.upsert(
+                collection_name=self.qdrant.collection_name,
+                points=points_to_update,
+            )
+
+        logger.info(
+            f"Updated health scores for {self.stats['health_updated']} memories"
+        )
 
     async def _get_all_memories(self) -> List[Entry]:
         """Retrieve all memories from Qdrant with pagination"""

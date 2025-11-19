@@ -18,11 +18,19 @@ echo "   Destination: ${BACKUP_DIR}"
 # Create backup directory
 mkdir -p "${BACKUP_DIR}"
 
-# Backup Spot MCP Server data
+# Backup Spot MCP Server data (from Docker volume)
 echo ""
 echo "📦 Spot MCP Server..."
+
+# Create local backup directory
+mkdir -p "${BACKUP_DIR}/spot-mcp-server/qdrant-data"
+
+# First, create a temporary backup on the remote server from the Docker volume
+ssh ${ORACLE_USER}@${ORACLE_IP} "sudo docker run --rm -v ubuntu_qdrant-storage:/source -v /home/ubuntu/qdrant-data-temp:/backup alpine sh -c 'cp -a /source/. /backup/' && sudo chown -R ubuntu:ubuntu /home/ubuntu/qdrant-data-temp"
+
+# Then rsync it locally
 rsync -avz --delete \
-  ${ORACLE_USER}@${ORACLE_IP}:~/qdrant-data/ \
+  ${ORACLE_USER}@${ORACLE_IP}:~/qdrant-data-temp/ \
   "${BACKUP_DIR}/spot-mcp-server/qdrant-data/"
 
 if [ $? -eq 0 ]; then
